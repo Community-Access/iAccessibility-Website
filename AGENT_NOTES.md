@@ -218,8 +218,21 @@ Last updated: 2026-06-07
 - `scripts/migrate-wp.mjs --posts-only`: imported all 1,543 posts (1,542 published) with author
   names. `scripts/migrate-media.mjs`: imported 511 media rows and set featured images on 705
   posts from WP `_thumbnail_id`. Idempotent upserts. Blog now serves from Neon, not WP REST.
-- Login: taylor@techopolis.app (id 5) and techopolis@techopolis.online (id 4) are both `admin`
-  with valid auth ids; sign in via the header Log In.
+- Roles: taylor@techopolis.app (id 5) and techopolis@techopolis.online (id 4) are both `admin`
+  in `public.users`. BUT there is NO Neon Auth account for those emails — those rows were SEEDED
+  with placeholder auth ids. The only real Neon Auth account is an e2e test user. So "Log In" /
+  "Forgot Password" fail (nothing to authenticate). The admins must SIGN UP with their email to
+  create a credential account + set a password; `getCurrentAppUser` matches by email and grants
+  admin. Neon Auth (Better Auth) stores credentials in `neon_auth.*` (account/user/session/
+  verification) — do NOT hand-write passwords there.
+- `getCurrentAppUser` now CLAIMS a pre-existing email-matched record by updating its
+  `auth_user_id` to the current auth identity on first sign-in (links seeded admin rows to the
+  real auth account).
+
+### Open accessibility investigation
+- User reported an "unlabeled button on one of the controls." All buttons in our own code have
+  text or `aria-label`, and the deployed /auth/sign-in a11y tree is clean. Likely a third-party
+  widget (Neon Auth AuthView or the BlockNote editor toolbar). Needs the exact page/control to fix.
 
 ### Still pending
 - Category FILTER on the posts listing (Start-testing filter component) — needs WP category +
