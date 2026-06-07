@@ -1,13 +1,22 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ContentList } from "@/components/layout/content-list";
+import { Pagination } from "@/components/layout/pagination";
 import { ReportSubmissionForm } from "@/components/forms/report-submission-form";
-import { getLatestPosts } from "@/lib/content/wordpress";
+import { getPostsPage } from "@/lib/content/wordpress";
 
 export const dynamic = "force-dynamic";
 
-export default async function ReportPage() {
-  const posts = await getLatestPosts(12);
+export default async function ReportPage({
+  searchParams
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page } = await searchParams;
+  const { posts, page: activePage, totalPages } = await getPostsPage(
+    Math.max(1, Number(page) || 1),
+    12
+  );
 
   return (
     <div className="wp-container space-y-8">
@@ -19,17 +28,21 @@ export default async function ReportPage() {
         </p>
         <div className="mt-5">
           <Button asChild>
-            <Link href="#submit-report">Submit Report</Link>
+            <Link href="#submit-report">Submit to the Report</Link>
           </Button>
         </div>
       </section>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
-        <div className="wp-article">
-          <ContentList title="Latest Report Posts" items={posts} />
-        </div>
-        <ReportSubmissionForm />
-      </div>
+      <section className="wp-article">
+        <ContentList title="Latest Posts" items={posts} />
+        <Pagination
+          page={activePage}
+          totalPages={totalPages}
+          hrefFor={(p) => `/report?page=${p}#latest-posts-heading`}
+        />
+      </section>
+
+      <ReportSubmissionForm />
     </div>
   );
 }

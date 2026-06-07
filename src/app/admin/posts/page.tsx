@@ -3,17 +3,26 @@ import { redirect } from "next/navigation";
 import { desc } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
 import { blogPosts } from "@/db/schema";
+import { ItemTable, type ItemTableColumn } from "@/components/ui/item-table";
 import { canAdmin, getCurrentAppUser } from "@/lib/auth/server";
 import { dateLabel } from "@/lib/content/wordpress";
 
 export const dynamic = "force-dynamic";
 
+type PostRow = {
+  id: number;
+  title: string;
+  slug: string;
+  status: string;
+  publishedAt: Date | null;
+  createdAt: Date;
+};
+
 export default async function AdminPostsPage() {
-  // Defense in depth: the nav hides this from moderators, but enforce it here too.
   const user = await getCurrentAppUser();
   if (!canAdmin(user?.role)) redirect("/admin");
 
-  const recent =
+  const recent: PostRow[] =
     hasDatabase && db
       ? await db
           .select({
@@ -28,6 +37,21 @@ export default async function AdminPostsPage() {
           .orderBy(desc(blogPosts.publishedAt))
           .limit(25)
       : [];
+
+  const columns: ItemTableColumn<PostRow>[] = [
+    { key: "title", header: "Title", rowHeader: true, render: (p) => p.title },
+    {
+      key: "status",
+      header: "Status",
+      render: (p) => <span className="capitalize">{p.status}</span>
+    },
+    {
+      key: "published",
+      header: "Published",
+      render: (p) =>
+        p.publishedAt ? dateLabel(p.publishedAt.toISOString()) : "—"
+    }
+  ];
 
   return (
     <div className="space-y-8">
@@ -50,42 +74,15 @@ export default async function AdminPostsPage() {
         <h2 id="recent-posts-heading" className="mb-4 text-2xl font-semibold">
           Recent posts
         </h2>
-        {recent.length === 0 ? (
-          <p>No posts yet.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full" aria-label="Recent posts">
-              <thead>
-                <tr className="bg-muted">
-                  <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                    Title
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                    Status
-                  </th>
-                  <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                    Published
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {recent.map((post) => (
-                  <tr key={post.id} className="border-t border-border">
-                    <th scope="row" className="px-4 py-3 text-left font-normal">
-                      {post.title}
-                    </th>
-                    <td className="px-4 py-3 capitalize">{post.status}</td>
-                    <td className="px-4 py-3">
-                      {post.publishedAt
-                        ? dateLabel(post.publishedAt.toISOString())
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <ItemTable
+          caption="Recent posts"
+          headingId="recent-posts-table"
+          columns={columns}
+          items={recent}
+          getItemKey={(p) => String(p.id)}
+          emptyTitle="No posts yet"
+          emptyMessage="Create your first post with the block editor."
+        />
       </section>
     </div>
   );

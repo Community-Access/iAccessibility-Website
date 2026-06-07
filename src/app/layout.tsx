@@ -12,7 +12,12 @@ export const metadata: Metadata = {
     template: "%s | iAccessibility"
   },
   description:
-    "Making Success Accessible through accessible technology reporting, podcasts, community, and app discovery."
+    "Making Success Accessible through accessible technology reporting, podcasts, community, and app discovery.",
+  alternates: {
+    types: {
+      "application/rss+xml": "/feed.xml"
+    }
+  }
 };
 
 export default function RootLayout({

@@ -165,3 +165,69 @@ Last updated: 2026-06-07
 - Relevant specialists must be run before claiming review complete: ARIA, keyboard,
   contrast, forms, live-region, alt-text/headings, tables, links, and modal/dialog if
   any overlay/banner behavior is in scope.
+
+## Session log — 2026-06-07 (Claude, continued from Codex)
+
+### Deployment (live)
+- GitHub `Community-Access/iAccessibility-Website` @ `main`; pushes auto-deploy.
+- DigitalOcean App Platform app `iaccessibility` id `f2edf3c3-f0e2-409e-a641-b6480e3edf2e`,
+  live `https://iaccessibility-9h5gv.ondigitalocean.app`. Source switched to the GitHub
+  integration with `deploy_on_push: true`. AWS SES env added to the DO spec (email works in
+  prod). `doctl` authed ("My Team"). DO spec edits are FULL-spec replace via `doctl apps update`.
+
+### Hard rule
+- Do NOT modify the live WordPress site / WP-CLI (user directive, repeated). It is read-only
+  reference; all "menu/content" changes apply to the Next.js rebuild.
+
+### Design / layout / public site
+- Removed ALL dark mode. Light-only, live WP blues; text/links use AA-safe `#0f6cba`
+  (live `#1e73be` failed 4.5:1). Header `#0066bf`, hover `#035a9e`, footer `#55555e`.
+- Full-bleed header; content `max-w-7xl`. Removed the deprecated "Ask iAccessibility" chatbot.
+- Footer: dark gray, centered socials. FIXED a real bug — footer `<a>` inherited the global
+  blue (unreadable on gray); social links now `text-white`. Footer links: About, Privacy
+  Policy (`/privacy`), RSS feed (`/feed.xml`).
+- Listings (`/blog`, `/report`, homepage "Latest Posts") = BTG-style card grid (`sm:2 / lg:3`)
+  with `<h3>` per post, a featured image (logo fallback), and a "By {author} · {date}" byline.
+- Report page: removed the right sidebar; full-width; "Submit to the Report" link at top
+  anchors to the full-width submission form. Renamed listing to "Latest Posts" (spans all
+  categories incl. iACast).
+- Pagination component (`src/components/layout/pagination.tsx`), used on `/blog` and `/report`.
+- RSS at `/feed.xml` (RSS 2.0, latest 50 posts) + `<link rel=alternate>` discovery.
+- Privacy policy page at `/privacy`.
+
+### Email (AWS SES, light-only, AA) — `src/lib/email/client.ts`
+- Templates for every event: welcome, admin new-user, per-submission confirmation + admin
+  notification (directory/report/audio), approved/rejected. Wired into signup, the three
+  submission routes, and admin approve/reject. REVIEW_NOTIFICATION_EMAIL=taylor@techopolisonline.com.
+
+### Admin panel (RBAC) — `src/app/admin/*`
+- Shell guards `canModerate`; role-filtered nav. Moderators: Dashboard + Review queue.
+  Admins also: Posts. `/admin/posts*` additionally guard `canAdmin` server-side.
+- Tables use a light-themed port of Start-testing's accessible `ItemTable`
+  (`src/components/ui/item-table.tsx`): caption+count, scope col/row, keyboard-scrollable region,
+  skip-to-top/bottom links.
+- BlockNote editor at `/admin/posts/new` (admin-only): title, featured image w/ required alt,
+  block body, draft/publish (publish announces on social). Images upload to Spaces via
+  `/api/admin/media/upload`. Accessible field-error focus, remove-image, file focus ring.
+- Auto-publish: admin/mod report submissions skip review and post to social
+  (`src/lib/social`: Mastodon wired; X/Facebook gated on env).
+
+### Database (Neon project `frosty-bar-79561958`)
+- Fixed `users` schema drift (removed phantom `username`; added real `avatar_url`).
+- Added `blog_posts` columns: `author_name`, `featured_image_url`, `featured_image_alt`.
+- `scripts/migrate-wp.mjs --posts-only`: imported all 1,543 posts (1,542 published) with author
+  names. `scripts/migrate-media.mjs`: imported 511 media rows and set featured images on 705
+  posts from WP `_thumbnail_id`. Idempotent upserts. Blog now serves from Neon, not WP REST.
+- Login: taylor@techopolis.app (id 5) and techopolis@techopolis.online (id 4) are both `admin`
+  with valid auth ids; sign in via the header Log In.
+
+### Still pending
+- Category FILTER on the posts listing (Start-testing filter component) — needs WP category +
+  post-category migration from taxonomy.sql first.
+- App DIRECTORY migration incl. app ICONS (fetch/store icons), then "Latest From The Directory".
+- PAGES migration (deferred until editor matures).
+- Featured-image alt quality: many migrated images have no WP alt (currently decorative empty alt).
+- Rehost body images + the logo off `wp-content` to Spaces for FULL WP independence.
+- Real full-text blog search; colleagues' forgot-password/search notes (specifics needed).
+- Non-site tasks: add Lauren as GitHub collaborator (need handle); fork into a separate
+  blog-post-submission app (Beyond-The-Gallery-based).

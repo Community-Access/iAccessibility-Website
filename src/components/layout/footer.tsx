@@ -25,7 +25,7 @@ export function Footer() {
                 href={social.href}
                 rel="noopener noreferrer"
                 target="_blank"
-                className="inline-flex items-center rounded-md px-3 py-2 text-sm underline-offset-4 hover:bg-white/10 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="inline-flex items-center rounded-md px-3 py-2 text-sm text-white underline-offset-4 hover:bg-white/10 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 {social.label}
                 <span className="sr-only"> (opens in a new tab)</span>
@@ -44,6 +44,18 @@ export function Footer() {
           >
             About
           </Link>
+          <Link
+            href="/privacy"
+            className="text-slate-100 underline-offset-4 hover:underline"
+          >
+            Privacy Policy
+          </Link>
+          <a
+            href="/feed.xml"
+            className="text-slate-100 underline-offset-4 hover:underline"
+          >
+            RSS feed
+          </a>
         </div>
       </div>
     </footer>

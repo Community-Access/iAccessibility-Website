@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
 import { blogPosts, directoryEntries, pages, podcastEpisodes, podcastShows } from "@/db/schema";
 import { formatDate, paragraphsFromText, stripHtml } from "@/lib/utils";
@@ -15,6 +15,7 @@ export type ContentSummary = {
   href: string;
   author?: string | null;
   imageUrl?: string | null;
+  imageAlt?: string | null;
 };
 
 export type ContentDetail = ContentSummary & {
@@ -177,7 +178,9 @@ export async function getLatestPosts(limit = 8): Promise<ContentSummary[]> {
         excerpt: post.excerpt ?? stripHtml(post.body).slice(0, 240),
         date: post.publishedAt?.toISOString() ?? post.createdAt.toISOString(),
         href: `/blog/${post.slug}`,
-        author: post.authorName
+        author: post.authorName,
+        imageUrl: post.featuredImageUrl,
+        imageAlt: post.featuredImageAlt
       }));
     }
   }
@@ -187,6 +190,56 @@ export async function getLatestPosts(limit = 8): Promise<ContentSummary[]> {
   );
 
   return (posts ?? []).map(wpToSummary);
+}
+
+export type PostsPage = {
+  posts: ContentSummary[];
+  page: number;
+  totalPages: number;
+  total: number;
+};
+
+export async function getPostsPage(page = 1, perPage = 12): Promise<PostsPage> {
+  const safePage = Math.max(1, Math.floor(page) || 1);
+
+  if (hasDatabase && db) {
+    const offset = (safePage - 1) * perPage;
+    const [rows, totals] = await Promise.all([
+      db
+        .select()
+        .from(blogPosts)
+        .where(eq(blogPosts.status, "published"))
+        .orderBy(desc(blogPosts.publishedAt))
+        .limit(perPage)
+        .offset(offset),
+      db
+        .select({ value: count() })
+        .from(blogPosts)
+        .where(eq(blogPosts.status, "published"))
+    ]);
+    const total = totals[0]?.value ?? 0;
+
+    if (total > 0) {
+      return {
+        posts: rows.map((post) => ({
+          id: post.id,
+          title: post.title,
+          slug: post.slug,
+          excerpt: post.excerpt ?? stripHtml(post.body).slice(0, 240),
+          date: post.publishedAt?.toISOString() ?? post.createdAt.toISOString(),
+          href: `/blog/${post.slug}`,
+          author: post.authorName
+        })),
+        page: safePage,
+        totalPages: Math.max(1, Math.ceil(total / perPage)),
+        total
+      };
+    }
+  }
+
+  // Fallback to the live WordPress REST API (single page).
+  const posts = await getLatestPosts(perPage);
+  return { posts, page: 1, totalPages: 1, total: posts.length };
 }
 
 export async function getPostBySlug(slug: string): Promise<ContentDetail | null> {
@@ -204,6 +257,8 @@ export async function getPostBySlug(slug: string): Promise<ContentDetail | null>
         date: row.publishedAt?.toISOString() ?? row.createdAt.toISOString(),
         href: `/blog/${row.slug}`,
         author: row.authorName,
+        imageUrl: row.featuredImageUrl,
+        imageAlt: row.featuredImageAlt,
         html: row.body.includes("<") ? row.body : paragraphsFromText(row.body)
       };
     }

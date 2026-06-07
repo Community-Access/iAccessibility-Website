@@ -1,10 +1,14 @@
 import { desc, eq } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
 import { blogPosts, directoryEntries } from "@/db/schema";
+import { ItemTable, type ItemTableColumn } from "@/components/ui/item-table";
 import { dateLabel } from "@/lib/content/wordpress";
 import { decideDirectoryEntry, decideReportPost } from "../actions";
 
 export const dynamic = "force-dynamic";
+
+type PostRow = typeof blogPosts.$inferSelect;
+type DirRow = typeof directoryEntries.$inferSelect;
 
 function ReviewActions({
   id,
@@ -59,6 +63,46 @@ export default async function AdminReviewPage() {
         ])
       : [[], []];
 
+  const postColumns: ItemTableColumn<PostRow>[] = [
+    { key: "title", header: "Title", rowHeader: true, render: (p) => p.title },
+    {
+      key: "created",
+      header: "Created",
+      render: (p) => dateLabel(p.createdAt.toISOString())
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (p) => (
+        <ReviewActions
+          id={p.id}
+          action={decideReportPost}
+          label={`report: ${p.title}`}
+        />
+      )
+    }
+  ];
+
+  const dirColumns: ItemTableColumn<DirRow>[] = [
+    { key: "app", header: "App", rowHeader: true, render: (e) => e.appName },
+    {
+      key: "created",
+      header: "Created",
+      render: (e) => dateLabel(e.createdAt.toISOString())
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (e) => (
+        <ReviewActions
+          id={e.id}
+          action={decideDirectoryEntry}
+          label={`app: ${e.appName}`}
+        />
+      )
+    }
+  ];
+
   return (
     <div className="space-y-8">
       <section className="wp-article">
@@ -73,130 +117,30 @@ export default async function AdminReviewPage() {
         <h2 id="pending-posts-heading" className="mb-4 text-2xl font-semibold">
           Pending Report Posts
         </h2>
-        {pendingPosts.length === 0 ? (
-          <p>No pending report posts.</p>
-        ) : (
-          <>
-            <div className="space-y-4 md:hidden" role="list" aria-label="Pending report posts">
-              {pendingPosts.map((post) => (
-                <article key={post.id} role="listitem" className="border-b border-border py-4">
-                  <h3 className="font-semibold">{post.title}</h3>
-                  <p className="text-sm text-[#595959]">
-                    {dateLabel(post.createdAt.toISOString())}
-                  </p>
-                  <div className="mt-3">
-                    <ReviewActions
-                      id={post.id}
-                      action={decideReportPost}
-                      label={`report: ${post.title}`}
-                    />
-                  </div>
-                </article>
-              ))}
-            </div>
-            <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
-              <table className="w-full" aria-label="Pending report posts">
-                <thead>
-                  <tr className="bg-muted">
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      Title
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      Created
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingPosts.map((post) => (
-                    <tr key={post.id} className="border-t border-border">
-                      <th scope="row" className="px-4 py-3 text-left font-normal">
-                        {post.title}
-                      </th>
-                      <td className="px-4 py-3">
-                        {dateLabel(post.createdAt.toISOString())}
-                      </td>
-                      <td className="px-4 py-3">
-                        <ReviewActions
-                          id={post.id}
-                          action={decideReportPost}
-                          label={`report: ${post.title}`}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        <ItemTable
+          caption="Pending report posts"
+          headingId="pending-posts-table"
+          columns={postColumns}
+          items={pendingPosts}
+          getItemKey={(p) => String(p.id)}
+          emptyTitle="No pending report posts"
+          emptyMessage="Nothing is waiting for review."
+        />
       </section>
 
       <section className="wp-article" aria-labelledby="pending-directory-heading">
         <h2 id="pending-directory-heading" className="mb-4 text-2xl font-semibold">
           Pending Directory Entries
         </h2>
-        {pendingDirectory.length === 0 ? (
-          <p>No pending directory entries.</p>
-        ) : (
-          <>
-            <div className="space-y-4 md:hidden" role="list" aria-label="Pending directory entries">
-              {pendingDirectory.map((entry) => (
-                <article key={entry.id} role="listitem" className="border-b border-border py-4">
-                  <h3 className="font-semibold">{entry.appName}</h3>
-                  <p className="text-sm text-[#595959]">
-                    {dateLabel(entry.createdAt.toISOString())}
-                  </p>
-                  <div className="mt-3">
-                    <ReviewActions
-                      id={entry.id}
-                      action={decideDirectoryEntry}
-                      label={`app: ${entry.appName}`}
-                    />
-                  </div>
-                </article>
-              ))}
-            </div>
-            <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
-              <table className="w-full" aria-label="Pending directory entries">
-                <thead>
-                  <tr className="bg-muted">
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      App
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      Created
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingDirectory.map((entry) => (
-                    <tr key={entry.id} className="border-t border-border">
-                      <th scope="row" className="px-4 py-3 text-left font-normal">
-                        {entry.appName}
-                      </th>
-                      <td className="px-4 py-3">
-                        {dateLabel(entry.createdAt.toISOString())}
-                      </td>
-                      <td className="px-4 py-3">
-                        <ReviewActions
-                          id={entry.id}
-                          action={decideDirectoryEntry}
-                          label={`app: ${entry.appName}`}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        <ItemTable
+          caption="Pending directory entries"
+          headingId="pending-directory-table"
+          columns={dirColumns}
+          items={pendingDirectory}
+          getItemKey={(e) => String(e.id)}
+          emptyTitle="No pending directory entries"
+          emptyMessage="Nothing is waiting for review."
+        />
       </section>
     </div>
   );

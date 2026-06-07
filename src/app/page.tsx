@@ -64,7 +64,7 @@ export default async function HomePage() {
             </p>
           </section>
 
-          <ContentList title="Latest from the Report" items={reports.slice(0, 6)} />
+          <ContentList title="Latest Posts" items={reports.slice(0, 6)} />
         </div>
 
         <Sidebar reports={reports} directory={directory} />
