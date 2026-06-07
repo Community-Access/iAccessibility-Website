@@ -24,9 +24,9 @@ export function ContentList({ title, items, emptyLabel }: ContentListProps) {
           {emptyLabel ?? "No content is available yet."}
         </p>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
-            <Card key={`${item.id}-${item.slug}`}>
+            <Card key={`${item.id}-${item.slug}`} className="flex h-full flex-col">
               <CardHeader>
                 <CardTitle>
                   <Link href={item.href}>{item.title}</Link>
