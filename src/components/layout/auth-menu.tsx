@@ -6,11 +6,44 @@ import { ChevronDown, LogOut, Plus, Shield, User } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authClient } from "@/lib/auth/client";
 
-type SessionData = ReturnType<typeof authClient.useSession>["data"];
+type AppRole = "admin" | "moderator" | "member";
 
-function canAccessAdmin(session: SessionData) {
-  const role = session?.user.role;
+function canAccessAdminRole(role: string | null | undefined) {
   return role === "admin" || role === "moderator";
+}
+
+function useAppRole(userId?: string | null, fallbackRole?: string | null) {
+  const [role, setRole] = useState<string | null>(fallbackRole ?? null);
+
+  useEffect(() => {
+    if (!userId) {
+      setRole(null);
+      return;
+    }
+
+    let active = true;
+    setRole(fallbackRole ?? null);
+
+    fetch("/api/me", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as {
+          user?: { role?: AppRole | null } | null;
+        };
+      })
+      .then((payload) => {
+        if (active) setRole(payload?.user?.role ?? fallbackRole ?? null);
+      })
+      .catch(() => {
+        if (active) setRole(fallbackRole ?? null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [fallbackRole, userId]);
+
+  return role;
 }
 
 function Avatar({
@@ -55,6 +88,7 @@ export function AuthMenu() {
 
   const user = session.data?.user;
   const displayName = user?.name || user?.email || "Account";
+  const appRole = useAppRole(user?.id, user?.role);
 
   useEffect(() => {
     if (open && menuRef.current) {
@@ -204,7 +238,7 @@ export function AuthMenu() {
               Submit App
             </Link>
 
-            {canAccessAdmin(session.data) ? (
+            {canAccessAdminRole(appRole) ? (
               <Link
                 href="/admin"
                 role="menuitem"
@@ -239,6 +273,7 @@ export function MobileAuthActions() {
   const router = useRouter();
   const session = authClient.useSession();
   const user = session.data?.user;
+  const appRole = useAppRole(user?.id, user?.role);
 
   async function handleSignOut() {
     await authClient.signOut();
@@ -287,7 +322,7 @@ export function MobileAuthActions() {
       >
         Submit App
       </Link>
-      {canAccessAdmin(session.data) ? (
+      {canAccessAdminRole(appRole) ? (
         <Link
           href="/admin"
           className="rounded-md border border-white/50 px-3 py-2 text-center text-sm font-semibold text-white"

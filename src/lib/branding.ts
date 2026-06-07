@@ -2,3 +2,6 @@
 // posts that do not have one of their own.
 export const SITE_LOGO_URL =
   "https://iaccessibility.net/wp-content/uploads/2023/10/cropped-iA-Blue-128-Rounded.png";
+
+export const SITE_FALLBACK_IMAGE_URL =
+  "https://iaccessibility.net/wp-content/uploads/2024/09/iALogo1400.png";

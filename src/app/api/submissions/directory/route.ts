@@ -22,8 +22,11 @@ const schema = z.object({
   usability: z.string().min(1),
   lowVisionComments: z.string().optional(),
   otherComments: z.string().optional(),
+  itunesAppId: z.string().optional(),
+  iconUrl: z.string().url().optional().or(z.literal("")),
+  accessibilityNutritionLabels: z.string().optional(),
   appStoreUrl: z.string().url(),
-  websiteUrl: z.string().url()
+  websiteUrl: z.string().url().optional().or(z.literal(""))
 });
 
 function value(formData: FormData, key: string) {
@@ -65,6 +68,9 @@ export async function POST(request: Request) {
     usability: value(formData, "usability"),
     lowVisionComments: value(formData, "lowVisionComments"),
     otherComments: value(formData, "otherComments"),
+    itunesAppId: value(formData, "itunesAppId"),
+    iconUrl: value(formData, "iconUrl"),
+    accessibilityNutritionLabels: value(formData, "accessibilityNutritionLabels"),
     appStoreUrl: value(formData, "appStoreUrl"),
     websiteUrl: value(formData, "websiteUrl")
   });
@@ -86,6 +92,10 @@ export async function POST(request: Request) {
     `Directory category: ${data.category}`,
     `Free or paid: ${data.paidStatus}`,
     data.price ? `Price: ${data.price}` : "",
+    data.itunesAppId ? `iTunes app ID: ${data.itunesAppId}` : "",
+    data.accessibilityNutritionLabels
+      ? `Accessibility Nutrition Labels: ${data.accessibilityNutritionLabels}`
+      : "Accessibility Nutrition Labels: Not returned by Apple public lookup",
     `Tested devices: ${data.testedDevices}`,
     data.accessibilityRating ? `Accessibility rating: ${data.accessibilityRating}` : "",
     "",
@@ -108,8 +118,10 @@ export async function POST(request: Request) {
       appName: data.appName,
       slug: `${slugify(data.appName)}-${Date.now()}`,
       description: paragraphsFromText(detailText),
+      itunesAppId: data.itunesAppId || null,
+      iconUrl: data.iconUrl || null,
       appStoreUrl: data.appStoreUrl,
-      websiteUrl: data.websiteUrl,
+      websiteUrl: data.websiteUrl || null,
       status: "pending",
       submittedBy: user.id
     })

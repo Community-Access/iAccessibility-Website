@@ -234,13 +234,194 @@ Last updated: 2026-06-07
   text or `aria-label`, and the deployed /auth/sign-in a11y tree is clean. Likely a third-party
   widget (Neon Auth AuthView or the BlockNote editor toolbar). Needs the exact page/control to fix.
 
+### Session log — 2026-06-07 (Claude, App Directory redesign + migration audit)
+
+#### App Directory redesign (DONE, verified rendering on local dev :3001, tsc clean)
+- Drove the redesign through `accessibility-agents:accessibility-lead` FIRST (per project hook).
+  It returned a full WCAG 2.2 AA spec; implementation follows it.
+- FIXED a real bug: `getDirectoryEntries(limit = 24)` capped the page at 24 of 81 approved apps —
+  57 apps were invisible. Removed the cap; the page now shows ALL approved apps with client-side
+  search + filter + pagination (12/page).
+- Data layer (`src/lib/content/wordpress.ts`): `getDirectoryEntries()` now joins
+  `directory_entry_categories` and attaches `platforms[]` + `categories[]` to each entry by
+  splitting the migrated "Platform: Category" names (`splitDirectoryCategoryName`). Added
+  `deriveDirectoryFacets()` (distinct platforms/categories across approved entries) and the
+  `DirectoryFacets` type. `KNOWN_DIRECTORY_PLATFORMS` set gates valid platform prefixes.
+- New client component `src/components/directory/directory-browser.tsx`: native `<search>` + GET
+  form, platform checkboxes in a `<fieldset>`, a grouped category `<select>` (replaces the
+  unusable flat wall of 231 categories), removable active-filter chips + "Clear all", `<ul>/<li>`
+  card grid with `<article aria-labelledby>` + `<h4>` titles, accessible `<nav>` pagination,
+  polite `role="status"` live region announcing result counts (debounced 400ms), focus moved to
+  the results heading on page change, and a skip-to-results link. URL stays in sync
+  (`?q=&platform=&category=&page=`) for shareable/back-button state.
+- `src/app/app-directory/page.tsx` is now a server shell: H1 hero + top Submit CTA, the
+  `<DirectoryBrowser>` under an sr-only "Browse apps" H2, and a bottom "Submit an app" section
+  with a repeated CTA. `metadata.title` set.
+- Colleague (blind tester) feedback addressed: (1) submit CTA now repeated at the BOTTOM after the
+  list; (2) "unsure if logos are images" — app icons are correctly decorative `alt=""` (name is in
+  the adjacent H4), the no-icon fallback tile is `aria-hidden`, and the ambiguous platform text
+  list became real filter checkboxes; (3) pagination now actually exists on this page.
+- Link text: every card's "App Store"/"Developer website" link appends an sr-only
+  " for {appName}" so the 81 repeated links are unambiguous (2.4.4). Card links now underlined.
+- `src/app/page.tsx` homepage updated to `getDirectoryEntries().then(r => r.slice(0,5))` since the
+  limit arg was removed.
+
+#### Migration audit — what is and is NOT migrated (Neon `frosty-bar-79561958`, read-only checks)
+- DONE: posts 1,543; blog categories 244 + 2,278 post-category links; tags 830; media 511;
+  directory entries 81 (all approved) with 231 categories + 248 entry-category links.
+- Directory icons: only 32 of 81 entries have `icon_url` (the other 49 use the letter-tile
+  fallback). Fetching/storing the missing icons is still pending.
+- NOT migrated yet (real gaps; tables already exist so NO schema change needed to import):
+  - iACast PODCASTS: 300 `captivate_podcast` episodes (all `publish`, clean slugs) with audio
+    enclosures at `iaccessibility.net/iacast/*.mp3` (size + duration in the `enclosure` postmeta).
+    `podcast_shows`/`podcast_episodes` are EMPTY — the iACast nav page has no data. Big win, ready
+    to script.
+  - PAGES: 279 in `wp-pages.json`, `pages` table is EMPTY.
+  - EVENTS: my_calendar plugin data (only 2 `mc-events` in the small export file; the calendar
+    table was not fully exported).
+- MEDIA IMPORT ISSUES (confirmed):
+  1. ZERO rehosting — all 511 media URLs and all 705 featured images still point at live
+     `iaccessibility.net/wp-content`. The rebuild is still fully dependent on the WP site.
+  2. `media.alt` was set from the attachment `post_title` (filenames like IMG_1234), NOT the real
+     `_wp_attachment_image_alt`. The good alt is already parsed in `migrate-media.mjs` and used for
+     featured images, but the `media` table itself gets junk alt. Quick re-run fix, no schema change.
+  3. 9 posts embed inline `wp-content` body images that are neither rehosted nor alt-checked.
+
+### Session log — 2026-06-07 (Claude, migration completion pass)
+
+User directive: "get everything migrated from WordPress — all media, all posts; directory
+app icons fetched from the iTunes API; remove the sidebar (explicitly pulled)." Also a standing
+instruction: UPDATE THIS FILE every time something changes, before moving to the next task.
+
+DONE this session:
+- SIDEBAR REMOVED. Deleted `src/components/layout/sidebar.tsx`; collapsed the homepage
+  (`src/app/page.tsx`) two-column grid to a single full-width column. Routed through
+  accessibility-lead first (project hook) — returned GO; verified no dangling refs and that
+  `ContentList` still emits the "Latest Posts" H2 so the heading outline stays gap-free.
+- PAGES migrated. Ran `migrate-wp.mjs` (no `--posts-only`) → 279 pages imported into the
+  previously-empty `pages` table. Idempotent on `legacy_wp_post_id`.
+- DIRECTORY ICONS backfilled via the iTunes API. New script
+  `scripts/backfill-directory-icons.mjs` (idempotent, only fills `icon_url IS NULL`):
+  prefer `itunes_app_id` lookup, else parse the id out of `app_store_url`, else search by
+  name; stores 512px artwork. 49/49 resolved; reverted 1 wrong name-search match
+  (entry 80 "The End of an Era…", a non-app blog-style entry) back to the letter-tile.
+  Final directory icon coverage: **80/81** (entry 80 is genuinely not an app).
+
+iACast PODCAST findings (important — the prior note was wrong about audio location):
+- The 300 `captivate_podcast` posts DO NOT carry audio in their own `enclosure` meta. They
+  store Captivate metadata: `cfm_show_id`, `cfm_episode_id`, `cfm_episode_media_url`
+  (audio on `podcasts.captivate.fm`), `cfm_episode_artwork`, itunes summary/subtitle/number/
+  season/type/explicit, and a serialized `cfm_episode_transcript`.
+- Those 300 episodes span **6 distinct Captivate shows** (by `cfm_show_id`): 229 / 33 / 14 /
+  10 / 8 / 6 episodes. The export has NO show TITLES, only show UUIDs — naming the 6 shows is
+  a decision for Taylor/Michael (flagship 229 looks like the main iACast; 33 = "SafetyCast";
+  the 14 + 6 look like "Spanish with Carla" seasons; 10 and 8 unclear).
+- SEPARATELY, 486 classic self-hosted `/iacast/*.mp3` enclosures live on regular wp-posts
+  (titles like "#iACast 9 - Apple Gaming on a TV"), each with byte size + duration in the
+  `enclosure` postmeta. 144 of these share a slug with a captivate post (overlap/dupes).
+- Audio independence note: captivate audio is on captivate.fm (stable third party); the 486
+  classic MP3s are on the at-risk WP server. Rehosting podcast audio to Spaces is a heavy,
+  separate operation (hundreds of MP3s) and was NOT done — import will store enclosure URLs.
+
+### Session log — 2026-06-07 (Claude, iACast podcast import)
+
+User directive: "import only the iACast ones, don't worry about the other shows until I get
+direction from Michael, but import everything you see for iACast."
+
+DONE:
+- iACast PODCAST import COMPLETE. New script `scripts/migrate-podcasts.mjs` (idempotent;
+  show upserts on slug, episodes upsert on `guid`). One show "iACast" (id 1, slug/feed_slug
+  `iacast`). **575 unique episodes** imported, all with an audio URL:
+  - 229 modern Captivate episodes (Captivate show `e0ece56d-...`; audio on captivate.fm — stable).
+    Stable UUID guid, show notes, episode no parsed from title. Captivate meta exposes no byte
+    size/duration, so those are null for these.
+  - 346 classic-only self-hosted episodes (regular wp-posts w/ `/iacast/*.mp3` enclosure; audio
+    still on the at-risk WP server). Carry byte length + duration where present.
+  - Merged by slug; on the 144 overlapping slugs the Captivate version wins (richer + stable audio).
+  - Coverage: 575 audio URLs, 447 episode numbers, 574 show notes, 198 byte lengths, 125 durations.
+    Dates span 2015-08-24 → 2024-02-13.
+- The iACast page (`/iacast-network`) already queried `podcast_episodes` and now renders the
+  latest 12 from Neon (was empty before). No UI change needed for data to appear.
+- DELIBERATELY EXCLUDED (per directive, pending Michael): the other 5 Captivate shows —
+  SafetyCast (33), two language/"Spanish" shows (14 + 6), and two unnamed shows (10 + 8).
+  Their show UUIDs are in the script's findings; importing them later is a small change.
+
+SCHEMA DRIFT FOUND (Drizzle schema.ts vs live Neon, NOT fixed — flag for later):
+- `podcast_shows`: live column is `itunes_category` (schema.ts says `category`); live `explicit`
+  is `boolean` (schema.ts says `text`). The import script targets the LIVE columns. Any Drizzle
+  ORM query that selects `category`/`explicit` on shows would fail — `getLatestPodcastEpisodes`
+  avoids them so the page works. Worth reconciling schema.ts ↔ DB in a dedicated pass.
+
+### Session log — 2026-06-07 (Claude, iACast UI + episode artwork + blog image fallback)
+
+User directives: "build the podcast browse UI + episode pages + homepage latest; get artwork
+for the episodes too" then "the blog images are tiny squares — use the iA logo, not little
+squares, fix it."
+
+DONE:
+- EPISODE ARTWORK. Added nullable `image_url` to BOTH `podcast_episodes` and `podcast_shows`
+  (additive DDL, Taylor approved artwork → needed the column; also added to schema.ts). Updated
+  `migrate-podcasts.mjs`: episode art from `cfm_episode_artwork` (50 iACast episodes have unique
+  Captivate art), show art = the "iACast Network" iTunes cover (resolved via iTunes Podcast API).
+  Episodes with no own art fall back to the show cover. Re-ran import (idempotent).
+- iACast BROWSE UI. Routed through accessibility-lead FIRST (project hook) — returned a full
+  WCAG 2.2 AA spec; implementation follows it. New `src/components/podcast/podcast-browser.tsx`
+  (mirrors the audited directory-browser: search, 12/page pagination, polite live-region counts,
+  focus-to-results-heading on page change, URL sync, decorative `alt=""`+`aria-hidden` art,
+  sr-only download-link disambiguation, native `<audio aria-label>` per card). Rewrote
+  `src/app/iacast-network/page.tsx` as a server shell (H1 + sr-only H2 "Browse episodes" +
+  AudioSubmissionForm). New episode detail page `src/app/iacast-network/[slug]/page.tsx`
+  (generateMetadata title, Breadcrumb nav, H1, audio, download, show-notes via `demoteHeadings`,
+  no second `<main>` — global layout provides it + RouteChangeAnnouncer handles route focus).
+  Homepage `src/app/page.tsx`: new "Latest iACast Episodes" H2 section (latest 5, H3 card links).
+  Added `formatDuration`/`durationSpoken`/`demoteHeadings` to `src/lib/utils.ts`. Data layer:
+  `getPodcastEpisodes()` + `getPodcastEpisodeBySlug()` + artwork/duration on summaries. tsc clean;
+  verified all routes render (browse 200, episode 200 w/ descriptive <title>, home section, 404).
+- BLOG IMAGE FALLBACK FIXED (the "tiny squares" complaint). ROOT CAUSE: 838 of 1,543 posts (54%)
+  have NO featured image — confirmed `featured_media: 0` on LIVE WP too (those posts have no image
+  anywhere; we already migrated all 511 media). Our `ContentList` + blog detail rendered a 64px iA
+  logo centered in a big box → looked like broken little squares across the whole blog. FIX (per
+  Taylor: "use the logo, not squares"): replaced the tiny-logo fallback with a full-width BRANDED
+  BANNER — larger iA logo (h-20/h-24) + "iAccessibility" wordmark on a soft blue gradient
+  (`content-list.tsx`, `blog/[slug]/page.tsx`). Verified via screenshot — reads as intentional
+  branding. Also enlarged iACast episode card cover art from 64px → 96px square (podcast covers are
+  inherently square; bumped size rather than crop to a banner).
+
+### Session log — 2026-06-07 (Codex, global media-frame parity pass)
+
+User directive: "this is for the blog and not just the podcast" and "apply the same fix globally
+across all media rows."
+
+DONE:
+- Added shared `BrandedMediaFrame` (`src/components/layout/branded-media-frame.tsx`) so public
+  media cards no longer hand-roll tiny image placeholders. It renders real images full-width in a
+  stable aspect-ratio frame and renders a large branded iA fallback using the high-resolution
+  `iALogo1400.png` asset when no image exists.
+- Applied the shared frame globally to current public media rows: blog listing cards, blog detail
+  hero, iACast browse cards, iACast episode detail hero, homepage latest iACast cards, homepage
+  latest directory cards, and app-directory result cards.
+- Blog data layer now attempts a real image in this order: featured image first, then first inline
+  body image, then the branded iA fallback. When an inline image is promoted to the hero/detail
+  image, the first inline image block is removed from the rendered body to avoid immediate duplicate
+  artwork.
+- Confirmed migration facts from the export: 1,542 published posts, 705 with featured images, 38
+  with inline body images, and only 27 posts where an inline image can rescue a no-featured-image
+  post. The rest genuinely need branded fallback art unless Taylor chooses generated/category art.
+- Accessibility treatment: media-row/card images are decorative (`alt=""` + `aria-hidden`) because
+  the adjacent title/excerpt/date already names the content; blog detail hero uses the migrated WP
+  image alt when present. The visible fallback label uses WordPress active blue `#035a9e`; checked
+  contrast against the gradient stops at 7.09:1 on white, 6.28:1 on `#eaf2fb`, and 5.31:1 on
+  `#cfe1f4`.
+
 ### Still pending
-- Category FILTER on the posts listing (Start-testing filter component) — needs WP category +
-  post-category migration from taxonomy.sql first.
-- App DIRECTORY migration incl. app ICONS (fetch/store icons), then "Latest From The Directory".
-- PAGES migration (deferred until editor matures).
-- Featured-image alt quality: many migrated images have no WP alt (currently decorative empty alt).
-- Rehost body images + the logo off `wp-content` to Spaces for FULL WP independence.
-- Real full-text blog search; colleagues' forgot-password/search notes (specifics needed).
+- OTHER PODCAST shows — 5 remaining Captivate shows await Michael's naming direction.
+- Podcast audio rehost — the 346 classic iACast MP3s still point at live `iaccessibility.net/iacast`
+  (part of the broader media-rehost / WP-independence task). Captivate audio is already off-site.
+- MEDIA rehost off `wp-content` to Spaces (full WP independence) — all 511 media + ~705
+  featured images + 9 inline body images still point at live `iaccessibility.net/wp-content`.
+  Also fix `media.alt` to use real `_wp_attachment_image_alt`. NOT started.
+- Category FILTER on the POSTS listing (Start-testing filter component) — data migrated
+  (244 categories + links), so this is unblocked.
+- Real full-text blog search; colleagues' forgot-password notes (specifics needed).
 - Non-site tasks: add Lauren as GitHub collaborator (need handle); fork into a separate
   blog-post-submission app (Beyond-The-Gallery-based).

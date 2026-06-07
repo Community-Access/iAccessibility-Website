@@ -1,19 +1,25 @@
+import Link from "next/link";
+import { BrandedMediaFrame } from "@/components/layout/branded-media-frame";
 import { ContentList } from "@/components/layout/content-list";
-import { Sidebar } from "@/components/layout/sidebar";
-import { getDirectoryEntries, getLatestPosts } from "@/lib/content/wordpress";
+import {
+  getDirectoryEntries,
+  getLatestPodcastEpisodes,
+  getLatestPosts
+} from "@/lib/content/wordpress";
+import { durationSpoken, formatDate, formatDuration } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [reports, directory] = await Promise.all([
+  const [reports, directory, episodes] = await Promise.all([
     getLatestPosts(10),
-    getDirectoryEntries(5)
+    getDirectoryEntries().then((rows) => rows.slice(0, 5)),
+    getLatestPodcastEpisodes(5)
   ]);
 
   return (
     <div className="wp-container">
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="space-y-8">
+      <div className="space-y-8">
           <section className="wp-article">
             <h1 className="text-[31px] font-bold leading-tight tracking-normal md:text-[36px]">
               Welcome to iAccessibility
@@ -65,9 +71,102 @@ export default async function HomePage() {
           </section>
 
           <ContentList title="Latest Posts" items={reports.slice(0, 6)} />
-        </div>
 
-        <Sidebar reports={reports} directory={directory} />
+          {episodes.length > 0 ? (
+            <section aria-labelledby="latest-iacast-heading">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 id="latest-iacast-heading" className="text-2xl font-semibold">
+                  Latest iACast Episodes
+                </h2>
+                <Link href="/iacast-network" className="font-semibold">
+                  Browse all episodes
+                </Link>
+              </div>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {episodes.map((episode) => {
+                  const duration = formatDuration(episode.durationSeconds);
+                  const spoken = durationSpoken(episode.durationSeconds);
+                  return (
+                    <article
+                      key={`${episode.id}-${episode.slug}`}
+                      className="overflow-hidden rounded-lg border border-border bg-white shadow-wordpress"
+                    >
+                      <BrandedMediaFrame
+                        src={episode.image}
+                        alt=""
+                        decorative
+                        className="aspect-[16/10]"
+                        fallbackLabel="iACast"
+                      />
+                      <div className="p-4">
+                        <h3 className="text-lg font-semibold">
+                          <Link
+                            href={`/iacast-network/${episode.slug}`}
+                            className="text-[#0f6cba] underline underline-offset-2 hover:text-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf] rounded"
+                          >
+                            {episode.title}
+                          </Link>
+                        </h3>
+                        {episode.date || duration ? (
+                          <p className="mt-3 text-sm text-[#595959]">
+                            {episode.date ? (
+                              <time dateTime={episode.date}>
+                                {formatDate(episode.date)}
+                              </time>
+                            ) : null}
+                            {duration ? (
+                              <span>
+                                {episode.date ? " · " : ""}
+                                <span aria-hidden="true">{duration}</span>
+                                <span className="sr-only">{spoken}</span>
+                              </span>
+                            ) : null}
+                          </p>
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
+          {directory.length > 0 ? (
+            <section aria-labelledby="latest-directory-heading">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 id="latest-directory-heading" className="text-2xl font-semibold">
+                  Latest From The Directory
+                </h2>
+                <Link href="/app-directory" className="font-semibold">
+                  Browse all apps
+                </Link>
+              </div>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {directory.slice(0, 6).map((entry) => (
+                  <article
+                    key={`${entry.id}-${entry.slug}`}
+                    className="overflow-hidden rounded-lg border border-border bg-white shadow-wordpress"
+                  >
+                    <BrandedMediaFrame
+                      src={entry.iconUrl}
+                      alt=""
+                      decorative
+                      className="aspect-[16/10]"
+                      fallbackLabel="App Directory"
+                    />
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold">{entry.appName}</h3>
+                      {entry.description ? (
+                        <p className="mt-3 text-sm text-[#595959]">
+                          {entry.description}
+                        </p>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
       </div>
     </div>
   );

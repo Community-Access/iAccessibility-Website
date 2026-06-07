@@ -1,15 +1,39 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DIRECTORY_CATEGORIES, DIRECTORY_PLATFORMS, getDirectoryEntries } from "@/lib/content/wordpress";
+import { DirectoryBrowser } from "@/components/directory/directory-browser";
+import {
+  deriveDirectoryFacets,
+  getDirectoryEntries
+} from "@/lib/content/wordpress";
 
 export const dynamic = "force-dynamic";
 
-export default async function AppDirectoryPage() {
+export const metadata: Metadata = {
+  title: "App Directory"
+};
+
+export default async function AppDirectoryPage({
+  searchParams
+}: {
+  searchParams: Promise<{
+    q?: string;
+    platform?: string | string[];
+    category?: string;
+    page?: string;
+  }>;
+}) {
+  const { q, platform, category, page } = await searchParams;
   const entries = await getDirectoryEntries();
+  const facets = deriveDirectoryFacets(entries);
+
+  const initialPlatforms = (
+    Array.isArray(platform) ? platform : platform ? [platform] : []
+  ).filter((value) => facets.platforms.includes(value));
+  const initialPage = Math.max(1, Number.parseInt(page ?? "1", 10) || 1);
 
   return (
-    <div className="wp-container space-y-8">
+    <div className="wp-container space-y-10">
       <section className="wp-article text-center">
         <h1 className="text-3xl font-bold">App Directory</h1>
         <p className="mx-auto mt-4 max-w-3xl text-lg">
@@ -23,69 +47,46 @@ export default async function AppDirectoryPage() {
         </div>
       </section>
 
-      <section className="wp-article" aria-labelledby="directory-platforms-heading">
-        <h2 id="directory-platforms-heading" className="text-2xl font-semibold">
-          Platforms
-        </h2>
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-4">
-          {DIRECTORY_PLATFORMS.map((platform) => (
-            <li key={platform} className="rounded-md border border-border px-3 py-2">
-              {platform}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="wp-article" aria-labelledby="directory-categories-heading">
-        <h2 id="directory-categories-heading" className="text-2xl font-semibold">
-          Categories
-        </h2>
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-          {DIRECTORY_CATEGORIES.map((category) => (
-            <li key={category} className="rounded-md border border-border px-3 py-2">
-              {category}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="wp-article" aria-labelledby="directory-entries-heading">
-        <h2 id="directory-entries-heading" className="text-2xl font-semibold">
-          Approved Apps
+      <section className="wp-article" aria-labelledby="directory-browse-heading">
+        <h2 id="directory-browse-heading" className="sr-only">
+          Browse apps
         </h2>
         {entries.length === 0 ? (
-          <p className="mt-4 text-muted-foreground">
-            No approved entries are in Neon yet. WordPress app-directory
-            submissions have been exported and are ready for import once the
-            schema gaps are approved.
+          <p className="text-foreground">
+            No approved entries are in the directory yet. Once apps are approved
+            they will appear here.
           </p>
         ) : (
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {entries.map((entry) => (
-              <article
-                key={entry.id}
-                className="rounded-lg border border-border p-4"
-              >
-                <h3 className="text-lg font-semibold">{entry.appName}</h3>
-                {entry.description ? <p className="mt-2">{entry.description}</p> : null}
-                <div className="mt-3 flex flex-wrap gap-3 text-sm">
-                  {entry.appStoreUrl ? (
-                    <a href={entry.appStoreUrl} className="inline-flex items-center gap-1">
-                      App Store
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                    </a>
-                  ) : null}
-                  {entry.websiteUrl ? (
-                    <a href={entry.websiteUrl} className="inline-flex items-center gap-1">
-                      Developer website
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                    </a>
-                  ) : null}
-                </div>
-              </article>
-            ))}
-          </div>
+          <DirectoryBrowser
+            entries={entries}
+            platformFacets={facets.platforms}
+            categoryFacets={facets.categories}
+            initialQuery={q ?? ""}
+            initialPlatforms={initialPlatforms}
+            initialCategory={
+              category && facets.categories.includes(category) ? category : ""
+            }
+            initialPage={initialPage}
+          />
         )}
+      </section>
+
+      <section
+        className="wp-article text-center"
+        aria-labelledby="directory-submit-heading"
+      >
+        <h2 id="directory-submit-heading" className="text-2xl font-semibold">
+          Submit an app
+        </h2>
+        <p className="mx-auto mt-2 max-w-2xl">
+          Know an accessible app we should review? Submissions enter a
+          pending-review queue before publishing.
+        </p>
+        <div className="mt-4">
+          <Button asChild>
+            <Link href="/app-directory/submit">Submit App</Link>
+          </Button>
+        </div>
       </section>
     </div>
   );

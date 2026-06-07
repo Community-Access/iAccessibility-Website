@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
+import { BrandedMediaFrame } from "@/components/layout/branded-media-frame";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SITE_LOGO_URL } from "@/lib/branding";
 import type { ContentSummary } from "@/lib/content/wordpress";
 import { dateLabel } from "@/lib/content/wordpress";
 
@@ -31,19 +31,12 @@ export function ContentList({ title, items, emptyLabel }: ContentListProps) {
               key={`${item.id}-${item.slug}`}
               className="flex h-full flex-col overflow-hidden"
             >
-              {item.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={item.imageUrl}
-                  alt={item.imageAlt || ""}
-                  className="h-44 w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-44 w-full items-center justify-center bg-[#eef3f8]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={SITE_LOGO_URL} alt="" className="h-16 w-16" />
-                </div>
-              )}
+              <BrandedMediaFrame
+                src={item.imageUrl}
+                alt=""
+                decorative
+                className="aspect-[16/10]"
+              />
               <CardHeader>
                 <CardTitle>
                   <Link href={item.href}>{item.title}</Link>

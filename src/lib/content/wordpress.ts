@@ -1,6 +1,16 @@
-import { count, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
-import { blogPosts, directoryEntries, pages, podcastEpisodes, podcastShows } from "@/db/schema";
+import {
+  blogCategories,
+  blogPosts,
+  directoryCategories,
+  directoryEntries,
+  directoryEntryCategories,
+  pages,
+  podcastEpisodes,
+  podcastShows,
+  postCategories
+} from "@/db/schema";
 import { formatDate, paragraphsFromText, stripHtml } from "@/lib/utils";
 
 const WORDPRESS_API = "https://iaccessibility.net/wp-json/wp/v2";
@@ -31,6 +41,33 @@ export type DirectoryEntrySummary = {
   appStoreUrl?: string | null;
   websiteUrl?: string | null;
   iconUrl?: string | null;
+  platforms: string[];
+  categories: string[];
+};
+
+export type DirectoryFacets = {
+  platforms: string[];
+  categories: string[];
+};
+
+// Platform prefixes used by the migrated "Platform: Category" directory taxonomy.
+const KNOWN_DIRECTORY_PLATFORMS = new Set([
+  "iOS",
+  "iPadOS",
+  "macOS",
+  "watchOS",
+  "tvOS",
+  "visionOS",
+  "Windows",
+  "Android",
+  "Linux"
+]);
+
+export type DirectoryCategorySummary = {
+  id: number | string;
+  name: string;
+  slug: string;
+  description?: string | null;
 };
 
 export type PodcastEpisodeSummary = {
@@ -40,6 +77,23 @@ export type PodcastEpisodeSummary = {
   date: string;
   showNotes: string;
   enclosureUrl?: string | null;
+  image?: string | null;
+  durationSeconds?: number | null;
+  episodeNo?: number | null;
+};
+
+export type PodcastEpisodeDetail = {
+  id: number;
+  title: string;
+  slug: string;
+  date: string;
+  bodyHtml: string;
+  enclosureUrl?: string | null;
+  image?: string | null;
+  durationSeconds?: number | null;
+  episodeNo?: number | null;
+  byteLength?: number | null;
+  showTitle: string;
 };
 
 type WpRendered = {
@@ -114,6 +168,8 @@ function decodeEntities(value: string) {
   return value
     .replace(/&#8217;/g, "'")
     .replace(/&#8220;|&#8221;/g, '"')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -131,8 +187,65 @@ export function normalizeWordPressHtml(html: string) {
     .trim();
 }
 
+function imageAttribute(tag: string, name: string) {
+  const match = tag.match(
+    new RegExp(`${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i")
+  );
+  return decodeEntities(match?.[1] ?? match?.[2] ?? match?.[3] ?? "").trim();
+}
+
+function largestSrcFromSrcset(srcset: string) {
+  const candidates = srcset
+    .split(",")
+    .map((part) => {
+      const [url, descriptor] = part.trim().split(/\s+/, 2);
+      const width = Number(descriptor?.replace("w", "")) || 0;
+      return { url, width };
+    })
+    .filter((candidate) => candidate.url);
+
+  return candidates.sort((a, b) => b.width - a.width)[0]?.url ?? "";
+}
+
+function absoluteWordPressImageUrl(src: string) {
+  if (!src || src.startsWith("data:")) return "";
+  if (src.startsWith("//")) return `https:${src}`;
+  if (src.startsWith("/")) return `${WORDPRESS_ORIGIN}${src}`;
+  return src;
+}
+
+function firstImageFromHtml(html: string) {
+  for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
+    const tag = match[0];
+    const src =
+      imageAttribute(tag, "data-orig-file") ||
+      largestSrcFromSrcset(imageAttribute(tag, "srcset")) ||
+      imageAttribute(tag, "src");
+    const resolved = absoluteWordPressImageUrl(src);
+    if (!resolved) continue;
+
+    return {
+      src: resolved,
+      alt: imageAttribute(tag, "alt") || null
+    };
+  }
+
+  return null;
+}
+
+function removeFirstImageBlock(html: string) {
+  return html
+    .replace(
+      /<figure\b[^>]*>\s*(?:<a\b[^>]*>)?\s*<img\b[\s\S]*?(?:<\/a>)?\s*(?:<figcaption\b[\s\S]*?<\/figcaption>)?\s*<\/figure>/i,
+      ""
+    )
+    .replace(/<p>\s*(?:<a\b[^>]*>)?\s*<img\b[\s\S]*?(?:<\/a>)?\s*<\/p>/i, "")
+    .replace(/<img\b[^>]*>/i, "");
+}
+
 function wpToSummary(post: WpPost): ContentSummary {
-  const imageUrl = post._embedded?.["wp:featuredmedia"]?.[0]?.source_url ?? null;
+  const image = post._embedded?.["wp:featuredmedia"]?.[0];
+  const bodyImage = firstImageFromHtml(post.content.rendered ?? "");
 
   return {
     id: post.id,
@@ -141,7 +254,8 @@ function wpToSummary(post: WpPost): ContentSummary {
     excerpt: decodeEntities(stripHtml(post.excerpt.rendered ?? "")).slice(0, 240),
     date: post.date,
     href: `/blog/${post.slug}`,
-    imageUrl
+    imageUrl: image?.source_url ?? bodyImage?.src ?? null,
+    imageAlt: image?.alt_text ?? bodyImage?.alt ?? null
   };
 }
 
@@ -161,6 +275,58 @@ async function fetchWp<T>(path: string): Promise<T | null> {
   }
 }
 
+type DbPostRow = typeof blogPosts.$inferSelect;
+
+function dbPostToSummary(post: DbPostRow): ContentSummary {
+  const bodyImage = firstImageFromHtml(post.body);
+
+  return {
+    id: post.id,
+    title: post.title,
+    slug: post.slug,
+    excerpt: post.excerpt ?? stripHtml(post.body).slice(0, 240),
+    date: post.publishedAt?.toISOString() ?? post.createdAt.toISOString(),
+    href: `/blog/${post.slug}`,
+    author: post.authorName,
+    imageUrl: post.featuredImageUrl ?? bodyImage?.src ?? null,
+    imageAlt: post.featuredImageAlt ?? bodyImage?.alt ?? null
+  };
+}
+
+async function getDirectoryCategorySlugSet() {
+  if (!hasDatabase || !db) return new Set<string>();
+
+  const rows = await db
+    .select({ slug: directoryCategories.slug })
+    .from(directoryCategories);
+
+  return new Set(rows.map((row) => row.slug));
+}
+
+async function filterDirectoryPosts<T extends { id: number }>(rows: T[]) {
+  if (!hasDatabase || !db || rows.length === 0) return rows;
+
+  const directorySlugs = await getDirectoryCategorySlugSet();
+  if (directorySlugs.size === 0) return rows;
+
+  const categoryRows = await db
+    .select({
+      postId: postCategories.postId,
+      slug: blogCategories.slug
+    })
+    .from(postCategories)
+    .innerJoin(blogCategories, eq(postCategories.categoryId, blogCategories.id))
+    .where(inArray(postCategories.postId, rows.map((row) => row.id)));
+
+  const directoryPostIds = new Set(
+    categoryRows
+      .filter((row) => directorySlugs.has(row.slug))
+      .map((row) => row.postId)
+  );
+
+  return rows.filter((row) => !directoryPostIds.has(row.id));
+}
+
 export async function getLatestPosts(limit = 8): Promise<ContentSummary[]> {
   if (hasDatabase && db) {
     const rows = await db
@@ -168,20 +334,11 @@ export async function getLatestPosts(limit = 8): Promise<ContentSummary[]> {
       .from(blogPosts)
       .where(eq(blogPosts.status, "published"))
       .orderBy(desc(blogPosts.publishedAt))
-      .limit(limit);
+      .limit(5000);
 
     if (rows.length > 0) {
-      return rows.map((post) => ({
-        id: post.id,
-        title: post.title,
-        slug: post.slug,
-        excerpt: post.excerpt ?? stripHtml(post.body).slice(0, 240),
-        date: post.publishedAt?.toISOString() ?? post.createdAt.toISOString(),
-        href: `/blog/${post.slug}`,
-        author: post.authorName,
-        imageUrl: post.featuredImageUrl,
-        imageAlt: post.featuredImageAlt
-      }));
+      const filtered = await filterDirectoryPosts(rows);
+      return filtered.slice(0, limit).map(dbPostToSummary);
     }
   }
 
@@ -203,33 +360,20 @@ export async function getPostsPage(page = 1, perPage = 12): Promise<PostsPage> {
   const safePage = Math.max(1, Math.floor(page) || 1);
 
   if (hasDatabase && db) {
-    const offset = (safePage - 1) * perPage;
-    const [rows, totals] = await Promise.all([
-      db
-        .select()
-        .from(blogPosts)
-        .where(eq(blogPosts.status, "published"))
-        .orderBy(desc(blogPosts.publishedAt))
-        .limit(perPage)
-        .offset(offset),
-      db
-        .select({ value: count() })
-        .from(blogPosts)
-        .where(eq(blogPosts.status, "published"))
-    ]);
-    const total = totals[0]?.value ?? 0;
+    const rows = await db
+      .select()
+      .from(blogPosts)
+      .where(eq(blogPosts.status, "published"))
+      .orderBy(desc(blogPosts.publishedAt))
+      .limit(5000);
 
-    if (total > 0) {
+    if (rows.length > 0) {
+      const filtered = await filterDirectoryPosts(rows);
+      const total = filtered.length;
+      const offset = (safePage - 1) * perPage;
+
       return {
-        posts: rows.map((post) => ({
-          id: post.id,
-          title: post.title,
-          slug: post.slug,
-          excerpt: post.excerpt ?? stripHtml(post.body).slice(0, 240),
-          date: post.publishedAt?.toISOString() ?? post.createdAt.toISOString(),
-          href: `/blog/${post.slug}`,
-          author: post.authorName
-        })),
+        posts: filtered.slice(offset, offset + perPage).map(dbPostToSummary),
         page: safePage,
         totalPages: Math.max(1, Math.ceil(total / perPage)),
         total
@@ -249,6 +393,10 @@ export async function getPostBySlug(slug: string): Promise<ContentDetail | null>
     });
 
     if (row && row.status === "published") {
+      const bodyImage = firstImageFromHtml(row.body);
+      const usesBodyImage = !row.featuredImageUrl && Boolean(bodyImage?.src);
+      const body = usesBodyImage ? removeFirstImageBlock(row.body) : row.body;
+
       return {
         id: row.id,
         title: row.title,
@@ -257,9 +405,9 @@ export async function getPostBySlug(slug: string): Promise<ContentDetail | null>
         date: row.publishedAt?.toISOString() ?? row.createdAt.toISOString(),
         href: `/blog/${row.slug}`,
         author: row.authorName,
-        imageUrl: row.featuredImageUrl,
-        imageAlt: row.featuredImageAlt,
-        html: row.body.includes("<") ? row.body : paragraphsFromText(row.body)
+        imageUrl: row.featuredImageUrl ?? bodyImage?.src ?? null,
+        imageAlt: row.featuredImageAlt ?? bodyImage?.alt ?? null,
+        html: body.includes("<") ? body : paragraphsFromText(body)
       };
     }
   }
@@ -271,9 +419,18 @@ export async function getPostBySlug(slug: string): Promise<ContentDetail | null>
 
   if (!post) return null;
 
+  const bodyImage = firstImageFromHtml(post.content.rendered ?? "");
+  const hasFeaturedImage = Boolean(
+    post._embedded?.["wp:featuredmedia"]?.[0]?.source_url
+  );
+  const summary = wpToSummary(post);
+  const html = !hasFeaturedImage && bodyImage?.src
+    ? removeFirstImageBlock(post.content.rendered ?? "")
+    : post.content.rendered ?? "";
+
   return {
-    ...wpToSummary(post),
-    html: normalizeWordPressHtml(post.content.rendered ?? "")
+    ...summary,
+    html: normalizeWordPressHtml(html)
   };
 }
 
@@ -310,54 +467,184 @@ export async function getPageBySlug(slug: string): Promise<ContentDetail | null>
   };
 }
 
-export async function getDirectoryEntries(limit = 24): Promise<DirectoryEntrySummary[]> {
+// Splits a migrated directory category name into its platform + category parts.
+// "iOS: Books" -> { platform: "iOS", category: "Books" }
+// "Screen Readers" -> { platform: null, category: "Screen Readers" }
+// "iOS App Directory" (a root term) -> { platform: null, category: null }
+function splitDirectoryCategoryName(name: string): {
+  platform: string | null;
+  category: string | null;
+} {
+  const colon = name.indexOf(":");
+  if (colon > -1) {
+    const platform = name.slice(0, colon).trim();
+    const category = name.slice(colon + 1).trim();
+    return {
+      platform: KNOWN_DIRECTORY_PLATFORMS.has(platform) ? platform : null,
+      category: category || null
+    };
+  }
+  // Base categories without a platform prefix; ignore the "… App Directory" roots.
+  if (/\bApp Directory$/i.test(name)) return { platform: null, category: null };
+  return { platform: null, category: name.trim() || null };
+}
+
+export async function getDirectoryEntries(): Promise<DirectoryEntrySummary[]> {
   if (!hasDatabase || !db) return [];
 
   const rows = await db
     .select()
     .from(directoryEntries)
     .where(eq(directoryEntries.status, "approved"))
-    .orderBy(desc(directoryEntries.createdAt))
-    .limit(limit);
+    .orderBy(asc(directoryEntries.appName));
 
-  return rows.map((entry) => ({
-    id: entry.id,
-    appName: entry.appName,
-    slug: entry.slug,
-    description: entry.description ?? "",
-    status: entry.status,
-    appStoreUrl: entry.appStoreUrl,
-    websiteUrl: entry.websiteUrl,
-    iconUrl: entry.iconUrl
+  if (rows.length === 0) return [];
+
+  const links = await db
+    .select({
+      entryId: directoryEntryCategories.entryId,
+      name: directoryCategories.name
+    })
+    .from(directoryEntryCategories)
+    .innerJoin(
+      directoryCategories,
+      eq(directoryEntryCategories.categoryId, directoryCategories.id)
+    )
+    .where(
+      inArray(
+        directoryEntryCategories.entryId,
+        rows.map((row) => row.id)
+      )
+    );
+
+  const facetsByEntry = new Map<
+    number,
+    { platforms: Set<string>; categories: Set<string> }
+  >();
+  for (const link of links) {
+    const bucket =
+      facetsByEntry.get(link.entryId) ??
+      { platforms: new Set<string>(), categories: new Set<string>() };
+    const { platform, category } = splitDirectoryCategoryName(link.name);
+    if (platform) bucket.platforms.add(platform);
+    if (category) bucket.categories.add(category);
+    facetsByEntry.set(link.entryId, bucket);
+  }
+
+  return rows.map((entry) => {
+    const bucket = facetsByEntry.get(entry.id);
+    return {
+      id: entry.id,
+      appName: entry.appName,
+      slug: entry.slug,
+      description: entry.description ?? "",
+      status: entry.status,
+      appStoreUrl: entry.appStoreUrl,
+      websiteUrl: entry.websiteUrl,
+      iconUrl: entry.iconUrl,
+      platforms: bucket ? Array.from(bucket.platforms).sort() : [],
+      categories: bucket ? Array.from(bucket.categories).sort() : []
+    };
+  });
+}
+
+// Distinct platform + category facets present across the approved entries,
+// for building the directory filter controls.
+export function deriveDirectoryFacets(
+  entries: DirectoryEntrySummary[]
+): DirectoryFacets {
+  const platforms = new Set<string>();
+  const categories = new Set<string>();
+  for (const entry of entries) {
+    entry.platforms.forEach((platform) => platforms.add(platform));
+    entry.categories.forEach((category) => categories.add(category));
+  }
+  return {
+    platforms: Array.from(platforms).sort(),
+    categories: Array.from(categories).sort((a, b) => a.localeCompare(b))
+  };
+}
+
+export async function getDirectoryCategories(): Promise<DirectoryCategorySummary[]> {
+  if (hasDatabase && db) {
+    const rows = await db
+      .select({
+        id: directoryCategories.id,
+        name: directoryCategories.name,
+        slug: directoryCategories.slug
+      })
+      .from(directoryCategories)
+      .orderBy(asc(directoryCategories.name));
+
+    if (rows.length > 0) {
+      return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        description: null
+      }));
+    }
+  }
+
+  return DIRECTORY_CATEGORIES.map((name) => ({
+    id: name,
+    name,
+    slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+    description: null
   }));
+}
+
+const podcastSummarySelection = {
+  id: podcastEpisodes.id,
+  title: podcastEpisodes.title,
+  slug: podcastEpisodes.slug,
+  showNotes: podcastEpisodes.showNotes,
+  enclosureUrl: podcastEpisodes.enclosureUrl,
+  pubDate: podcastEpisodes.pubDate,
+  durationSeconds: podcastEpisodes.durationSeconds,
+  episodeNo: podcastEpisodes.episodeNo,
+  episodeImage: podcastEpisodes.imageUrl,
+  showImage: podcastShows.imageUrl
+};
+
+type PodcastSummaryRow = {
+  id: number;
+  title: string;
+  slug: string;
+  showNotes: string | null;
+  enclosureUrl: string | null;
+  pubDate: Date | null;
+  durationSeconds: number | null;
+  episodeNo: number | null;
+  episodeImage: string | null;
+  showImage: string | null;
+};
+
+function toPodcastSummary(episode: PodcastSummaryRow): PodcastEpisodeSummary {
+  return {
+    id: episode.id,
+    title: episode.title,
+    slug: episode.slug,
+    date: episode.pubDate?.toISOString() ?? "",
+    showNotes: stripHtml(episode.showNotes ?? "").slice(0, 220),
+    enclosureUrl: episode.enclosureUrl,
+    image: episode.episodeImage ?? episode.showImage ?? null,
+    durationSeconds: episode.durationSeconds,
+    episodeNo: episode.episodeNo
+  };
 }
 
 export async function getLatestPodcastEpisodes(limit = 10): Promise<PodcastEpisodeSummary[]> {
   if (hasDatabase && db) {
     const rows = await db
-      .select({
-        id: podcastEpisodes.id,
-        title: podcastEpisodes.title,
-        slug: podcastEpisodes.slug,
-        showNotes: podcastEpisodes.showNotes,
-        enclosureUrl: podcastEpisodes.enclosureUrl,
-        pubDate: podcastEpisodes.pubDate,
-        showSlug: podcastShows.slug
-      })
+      .select(podcastSummarySelection)
       .from(podcastEpisodes)
       .leftJoin(podcastShows, eq(podcastEpisodes.showId, podcastShows.id))
       .orderBy(desc(podcastEpisodes.pubDate))
       .limit(limit);
 
     if (rows.length > 0) {
-      return rows.map((episode) => ({
-        id: episode.id,
-        title: episode.title,
-        slug: episode.slug,
-        date: episode.pubDate?.toISOString() ?? "",
-        showNotes: stripHtml(episode.showNotes ?? "").slice(0, 260),
-        enclosureUrl: episode.enclosureUrl
-      }));
+      return rows.map(toPodcastSummary);
     }
   }
 
@@ -370,8 +657,61 @@ export async function getLatestPodcastEpisodes(limit = 10): Promise<PodcastEpiso
     title: decodeEntities(stripHtml(post.title.rendered ?? "Episode")),
     slug: post.slug,
     date: post.date,
-    showNotes: decodeEntities(stripHtml(post.excerpt.rendered ?? "")).slice(0, 260)
+    showNotes: decodeEntities(stripHtml(post.excerpt.rendered ?? "")).slice(0, 220)
   }));
+}
+
+// All iACast episodes, newest first, for the browse page (client-side
+// search + pagination, mirroring the App Directory pattern).
+export async function getPodcastEpisodes(): Promise<PodcastEpisodeSummary[]> {
+  if (!hasDatabase || !db) return [];
+  const rows = await db
+    .select(podcastSummarySelection)
+    .from(podcastEpisodes)
+    .leftJoin(podcastShows, eq(podcastEpisodes.showId, podcastShows.id))
+    .orderBy(desc(podcastEpisodes.pubDate));
+  return rows.map(toPodcastSummary);
+}
+
+export async function getPodcastEpisodeBySlug(
+  slug: string
+): Promise<PodcastEpisodeDetail | null> {
+  if (!hasDatabase || !db) return null;
+  const [episode] = await db
+    .select({
+      id: podcastEpisodes.id,
+      title: podcastEpisodes.title,
+      slug: podcastEpisodes.slug,
+      showNotes: podcastEpisodes.showNotes,
+      enclosureUrl: podcastEpisodes.enclosureUrl,
+      pubDate: podcastEpisodes.pubDate,
+      durationSeconds: podcastEpisodes.durationSeconds,
+      episodeNo: podcastEpisodes.episodeNo,
+      byteLength: podcastEpisodes.byteLength,
+      episodeImage: podcastEpisodes.imageUrl,
+      showImage: podcastShows.imageUrl,
+      showTitle: podcastShows.title
+    })
+    .from(podcastEpisodes)
+    .leftJoin(podcastShows, eq(podcastEpisodes.showId, podcastShows.id))
+    .where(eq(podcastEpisodes.slug, slug))
+    .limit(1);
+
+  if (!episode) return null;
+
+  return {
+    id: episode.id,
+    title: episode.title,
+    slug: episode.slug,
+    date: episode.pubDate?.toISOString() ?? "",
+    bodyHtml: episode.showNotes ?? "",
+    enclosureUrl: episode.enclosureUrl,
+    image: episode.episodeImage ?? episode.showImage ?? null,
+    durationSeconds: episode.durationSeconds,
+    episodeNo: episode.episodeNo,
+    byteLength: episode.byteLength,
+    showTitle: episode.showTitle ?? "iACast"
+  };
 }
 
 export function dateLabel(date: string) {

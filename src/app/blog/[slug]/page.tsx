@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { SITE_LOGO_URL } from "@/lib/branding";
+import { BrandedMediaFrame } from "@/components/layout/branded-media-frame";
 import { getPostBySlug, dateLabel } from "@/lib/content/wordpress";
 
 export const dynamic = "force-dynamic";
@@ -31,19 +31,12 @@ export default async function BlogPostPage({
             <p className="mt-4 text-lg text-muted-foreground">{post.excerpt}</p>
           ) : null}
         </header>
-        {post.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={post.imageUrl}
-            alt={post.imageAlt || ""}
-            className="mb-8 w-full rounded-lg object-cover"
-          />
-        ) : (
-          <div className="mb-8 flex h-48 w-full items-center justify-center rounded-lg bg-[#eef3f8]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={SITE_LOGO_URL} alt="" className="h-20 w-20" />
-          </div>
-        )}
+        <BrandedMediaFrame
+          src={post.imageUrl}
+          alt={post.imageAlt ?? ""}
+          className="mb-8 aspect-[16/9] max-h-[30rem] rounded-lg border border-border"
+          imageClassName="p-2"
+        />
         <div
           className="wp-prose"
           dangerouslySetInnerHTML={{ __html: post.html }}

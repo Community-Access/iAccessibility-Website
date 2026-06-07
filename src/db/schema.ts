@@ -217,6 +217,7 @@ export const podcastShows = pgTable("podcast_shows", {
   explicit: text("explicit").notNull().default("false"),
   type: podcastType("type").notNull().default("episodic"),
   coverArtKey: text("cover_art_key"),
+  imageUrl: text("image_url"),
   feedSlug: text("feed_slug").notNull().unique(),
   externalImportUrl: text("external_import_url"),
   spacesPrefix: text("spaces_prefix"),
@@ -244,6 +245,7 @@ export const podcastEpisodes = pgTable(
     durationSeconds: integer("duration_seconds"),
     episodeNo: integer("episode_no"),
     season: integer("season"),
+    imageUrl: text("image_url"),
     legacyWpPostId: integer("legacy_wp_post_id").unique(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow()

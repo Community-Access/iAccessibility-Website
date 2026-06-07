@@ -1,6 +1,11 @@
 import { DirectorySubmissionForm } from "@/components/forms/directory-submission-form";
+import { getDirectoryCategories } from "@/lib/content/wordpress";
 
-export default function SubmitAppPage() {
+export const dynamic = "force-dynamic";
+
+export default async function SubmitAppPage() {
+  const categories = await getDirectoryCategories();
+
   return (
     <div className="wp-container">
       <article className="wp-article">
@@ -11,7 +16,9 @@ export default function SubmitAppPage() {
             review before they publish.
           </p>
         </header>
-        <DirectorySubmissionForm />
+        <DirectorySubmissionForm
+          categories={categories.map((category) => category.name)}
+        />
       </article>
     </div>
   );
