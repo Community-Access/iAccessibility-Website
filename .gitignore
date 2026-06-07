@@ -23,6 +23,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Migration exports with private/member/form data
+/migration/wordpress-export/
+
 # Editor / OS
 .DS_Store
 .idea
@@ -38,3 +41,7 @@ yarn-error.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# Local verification artifacts (screenshots, browser automation output)
+/.playwright-mcp/
+/*.png

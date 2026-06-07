@@ -1,212 +1,91 @@
+@import "@neondatabase/auth/ui/css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  /*
-   * iAccessibility design tokens.
-   *
-   * Two layers live here:
-   *   1. --ia-* raw brand hex values (mirror docs/design-tokens.md and the
-   *      GeneratePress variable names so the mapping stays traceable).
-   *   2. shadcn-style semantic HSL channel triples (--background, --foreground,
-   *      ...) consumed by tailwind.config.ts via hsl(var(--token)). These are
-   *      channel triples (no hsl() wrapper) so Tailwind can add the alpha.
-   *
-   * Every text/surface, link, focus-ring, nav, button and error pair is
-   * verified at WCAG 2.2 AA (4.5:1 text / 3:1 UI) in BOTH themes. See the
-   * "Dark palette (verified)" section in docs/design-tokens.md for ratios.
-   */
   :root {
-    color-scheme: light dark;
-
-    /* Brand blue system (exact hex; do not lighten — see design-tokens.md). */
-    --ia-blue-hero: #0066bf;
-    --ia-blue-accent: #1e73be;
-    --ia-blue-deep: #035a9e;
-    --ia-blue-membership: #0c3d54;
-
-    /* Neutrals and text. */
-    --ia-text: #222222;
-    --ia-text-2: #575760;
-    --ia-text-muted: #b2b2be;
-    --ia-surface: #ffffff;
-    --ia-surface-2: #f7f8f9;
-    --ia-surface-3: #f0f0f0;
-
-    /* Semantic HSL triples (light theme). */
-    --background: 0 0% 100%; /* #ffffff */
-    --foreground: 0 0% 13.3%; /* #222222 — 15.91:1 on white */
+    --background: 0 0% 96%;
+    --foreground: 0 0% 13%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 13.3%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 13.3%;
-
-    /* Primary CTA = deep blue / white (7.09:1). */
-    --primary: 206.3 96.3% 31.6%; /* #035a9e */
+    --card-foreground: 0 0% 13%;
+    --primary: 208 73% 43%;
     --primary-foreground: 0 0% 100%;
-
-    /* Secondary = off-white surface with primary text. */
-    --secondary: 210 14.3% 97.3%; /* #f7f8f9 */
-    --secondary-foreground: 0 0% 13.3%;
-
-    /* Muted surface; muted-foreground maps to --ia-text-2 #575760 (7.15:1 on
-       white), NEVER --ia-text-muted #b2b2be (~2:1, borders/disabled only). */
-    --muted: 0 0% 94.1%; /* #f0f0f0 */
-    --muted-foreground: 240 4.9% 35.9%; /* #575760 */
-
-    /* Accent = content link blue (4.94:1 on white) with white text on fills. */
-    --accent: 208.1 72.7% 43.1%; /* #1e73be */
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 13%;
+    --muted: 0 0% 93%;
+    --muted-foreground: 0 0% 35%;
+    --accent: 208 73% 43%;
     --accent-foreground: 0 0% 100%;
-
-    /* Destructive: darkened red #b42318 (6.57:1 with white) for >= 4.5:1. */
-    --destructive: 4.2 76.5% 40%; /* #b42318 */
+    --destructive: 0 70% 42%;
     --destructive-foreground: 0 0% 100%;
-
-    /* Borders/inputs use --ia-text-2 so UI boundaries clear 3:1 (the lighter
-       #b2b2be muted token is reserved for decorative dividers / disabled). */
-    --border: 240 4.9% 35.9%; /* #575760 */
-    --input: 240 4.9% 35.9%;
-    --ring: 206.3 96.3% 31.6%; /* deep blue #035a9e */
-
+    --border: 0 0% 80%;
+    --input: 0 0% 80%;
+    --ring: 207 96% 32%;
     --radius: 0.5rem;
   }
 
-  .dark {
-    color-scheme: dark;
-
-    /* Brand blues hold in dark; nav/membership fills keep white text >= 4.5:1.
-       Hero/heading accents lighten to #4ea3e0 to read on dark surfaces. */
-    --ia-blue-hero: #4ea3e0;
-    --ia-blue-accent: #7cb8e8;
-    --ia-blue-deep: #035a9e;
-    --ia-blue-membership: #0c3d54;
-
-    --ia-text: #e8e8ed;
-    --ia-text-2: #c4c4cc;
-    --ia-text-muted: #8a8a94;
-    --ia-surface: #1a1b1c;
-    --ia-surface-2: #242526;
-    --ia-surface-3: #2e2f30;
-
-    /* Semantic HSL triples (dark theme). */
-    --background: 210 3.7% 10.6%; /* #1a1b1c */
-    --foreground: 240 12.2% 92%; /* #e8e8ed — 14.13:1 */
-    --card: 210 2.7% 14.5%; /* #242526 */
-    --card-foreground: 240 12.2% 92%; /* 12.57:1 on card */
-    --popover: 210 2.7% 14.5%;
-    --popover-foreground: 240 12.2% 92%;
-
-    /* Primary CTA stays deep blue / white (7.09:1) for headroom. */
-    --primary: 206.3 96.3% 31.6%; /* #035a9e */
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 210 2.7% 14.5%; /* #242526 */
-    --secondary-foreground: 240 12.2% 92%;
-
-    /* muted-foreground -> #c4c4cc (9.95:1 on surface, 8.86:1 on card). */
-    --muted: 210 2.7% 14.5%;
-    --muted-foreground: 240 7.3% 78.4%; /* #c4c4cc */
-
-    /* Lightened link/accent #7cb8e8 (8.11:1 on surface, 7.22:1 on card). */
-    --accent: 206.7 70.1% 69.8%; /* #7cb8e8 */
-    --accent-foreground: 210 3.7% 10.6%;
-
-    /* Lightened red #ff8a85 (7.58:1 on surface) with dark text on fills. */
-    --destructive: 2.5 100% 76.1%; /* #ff8a85 */
-    --destructive-foreground: 210 3.7% 10.6%;
-
-    /* Borders use #8a8a94 (5.05:1 on surface, 4.49:1 on card => clears 3:1). */
-    --border: 240 4.5% 56.1%; /* #8a8a94 */
-    --input: 240 4.5% 56.1%;
-    --ring: 205.1 70.2% 59.2%; /* lightened deep blue #4ea3e0 (6.27:1 UI) */
-  }
-
-  /* Base typography: system stack, body color/background, line-height 1.5. */
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-  }
-
-  /* Content links carry an underline — never color alone (SC 1.4.1). Color is
-     the accent blue token (#1e73be light 4.94:1 / #7cb8e8 dark 8.11:1). */
-  a {
-    color: hsl(var(--accent));
-    text-decoration: underline;
-    text-underline-offset: 0.15em;
-  }
-
-  /* Single token-based focus ring everywhere: deep-blue ring, offset 2.
-     The ring token is >= 3:1 against surfaces in both themes. */
-  :focus-visible {
-    outline: 2px solid hsl(var(--ring));
-    outline-offset: 2px;
-  }
-
-  /*
-   * Nav-bar focus ring. The header <nav> is filled with --ia-blue-accent
-   * (#1e73be light / #7cb8e8 dark), so the global deep-blue ring would sit at
-   * ~1.4:1 on the light fill — invisible. Controls rendered on the blue bar use
-   * .nav-focus-ring instead, which switches per theme so it always clears 3:1
-   * against the active fill:
-   *   - light: white ring on #1e73be = 4.94:1
-   *   - dark:  deep-blue #035a9e ring on #7cb8e8 = 3.34:1
-   * Verified in docs/design-tokens.md. The global ring is unchanged elsewhere.
-   */
-  .nav-focus-ring:focus-visible {
-    outline: 2px solid #ffffff;
-    outline-offset: 2px;
-  }
-
-  .dark .nav-focus-ring:focus-visible {
-    outline-color: var(--ia-blue-deep); /* #035a9e — 3.34:1 on #7cb8e8 */
-  }
-
-  /* Native form controls and color-mix follow the active theme. */
   * {
-    border-color: hsl(var(--border));
+    @apply border-border;
   }
 
-  /* Visually-hidden skip link that becomes visible on focus. First focusable
-     in <body>; lands on <main id="main-content">. */
-  .skip-link {
-    position: absolute;
-    left: 0.5rem;
-    top: -3rem;
-    z-index: 50;
-    padding: 0.5rem 1rem;
-    background: hsl(var(--background));
-    color: hsl(var(--primary));
-    text-decoration: underline;
-    border-radius: var(--radius);
-    transition: top 0.15s ease-in-out;
+  html {
+    scroll-behavior: smooth;
   }
 
-  .skip-link:focus {
-    top: 0.5rem;
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI",
+      Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+      "Segoe UI Symbol";
+    font-size: 17px;
+    line-height: 1.5;
   }
 
-  /* Keep <main> clear of any sticky header (Focus Not Obscured, SC 2.4.11). */
-  #main-content {
-    scroll-margin-top: 5rem;
+  a {
+    @apply text-[#0f6cba] underline-offset-4;
+  }
+
+  a:hover {
+    @apply underline;
   }
 }
 
-/*
- * Respect prefers-reduced-motion globally: neutralize animations/transitions
- * including Radix data-[state] animations. Covers utilities the tokens above
- * never reach.
- */
+@layer components {
+  .wp-container {
+    @apply mx-auto max-w-6xl px-4;
+  }
+
+  .wp-article {
+    @apply rounded-lg bg-white p-6 shadow-wordpress md:p-10;
+  }
+
+  .wp-prose {
+    @apply prose max-w-none prose-slate prose-a:text-[#0f6cba] prose-a:underline prose-headings:scroll-mt-24;
+  }
+
+  .wp-prose img {
+    @apply mx-auto rounded-md;
+  }
+
+  .wp-prose .has-text-align-center {
+    text-align: center;
+  }
+
+  .wp-prose .wp-block-button__link,
+  .wp-button {
+    @apply inline-flex rounded-md bg-[#55555e] px-4 py-2 font-semibold text-white no-underline hover:bg-[#3f4047];
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

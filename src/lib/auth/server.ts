@@ -1,21 +1,75 @@
-import "server-only";
-
 import { createNeonAuth } from "@neondatabase/auth/next/server";
+import { eq } from "drizzle-orm";
+import { db, hasDatabase } from "@/db";
+import { users } from "@/db/schema";
+import { notifyAdminNewUser, sendWelcomeEmail } from "@/lib/email/client";
 
-// Singleton server-side Neon Auth instance. Neon Auth is a MANAGED Better Auth
-// service: we proxy to the hosted base_url provisioned for this branch rather
-// than self-hosting an auth server. Exposes the Better Auth server methods
-// (getSession, signIn, signOut, ...) plus .handler() and .middleware().
-//
-// Env (see .env.local):
-//   NEON_AUTH_BASE_URL      — hosted Neon Auth endpoint for project
-//                             frosty-bar-79561958 / branch main.
-//   NEON_AUTH_COOKIE_SECRET — signs the session-cache cookie (>= 32 chars).
 export const auth = createNeonAuth({
   baseUrl: process.env.NEON_AUTH_BASE_URL!,
   cookies: {
-    secret: process.env.NEON_AUTH_COOKIE_SECRET!,
-    // 5-minute session cache; upstream re-validation after that.
-    sessionDataTtl: 300,
-  },
+    secret: process.env.NEON_AUTH_COOKIE_SECRET!
+  }
 });
+
+export type AppRole = "admin" | "moderator" | "member";
+
+type SessionUser = {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  username?: string | null;
+};
+
+export async function getSessionUser(): Promise<SessionUser | null> {
+  const { data: session } = await auth.getSession();
+  return (session?.user as SessionUser | undefined) ?? null;
+}
+
+export async function getCurrentAppUser() {
+  const sessionUser = await getSessionUser();
+
+  if (!sessionUser?.id || !sessionUser.email || !hasDatabase || !db) {
+    return null;
+  }
+
+  const existing = await db.query.users.findFirst({
+    where: eq(users.authUserId, sessionUser.id)
+  });
+
+  if (existing) return existing;
+
+  const byEmail = await db.query.users.findFirst({
+    where: eq(users.email, sessionUser.email)
+  });
+
+  if (byEmail) return byEmail;
+
+  const inserted = await db
+    .insert(users)
+    .values({
+      authUserId: sessionUser.id,
+      email: sessionUser.email,
+      username: sessionUser.username ?? sessionUser.email.split("@")[0],
+      displayName: sessionUser.name ?? sessionUser.email.split("@")[0],
+      role: "member"
+    })
+    .returning();
+
+  const created = inserted[0] ?? null;
+
+  if (created) {
+    // New member just created — fire welcome + admin notification.
+    void sendWelcomeEmail(created.email, created.displayName);
+    void notifyAdminNewUser({ email: created.email, name: created.displayName });
+  }
+
+  return created;
+}
+
+export function canModerate(role: AppRole | null | undefined) {
+  return role === "admin" || role === "moderator";
+}
+
+export function canAdmin(role: AppRole | null | undefined) {
+  return role === "admin";
+}

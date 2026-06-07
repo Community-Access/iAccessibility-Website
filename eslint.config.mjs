@@ -1,17 +1,12 @@
-// Flat config. eslint-config-next 16 ships native flat-config arrays from its
-// subpath exports, so we spread them directly instead of wrapping the legacy
-// shareable configs in FlatCompat. The FlatCompat route crashed under ESLint 9
-// ("Converting circular structure to JSON") because it tried to validate the
-// new flat plugin objects against the legacy eslintrc schema.
-import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
-import nextTypeScript from "eslint-config-next/typescript";
+import next from "eslint-config-next";
 
-const eslintConfig = [
-  ...nextCoreWebVitals,
-  ...nextTypeScript,
+export default [
+  ...next,
   {
-    ignores: [".next/**", "node_modules/**", "drizzle/**"],
-  },
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      "migration/wordpress-export/**"
+    ]
+  }
 ];
-
-export default eslintConfig;
