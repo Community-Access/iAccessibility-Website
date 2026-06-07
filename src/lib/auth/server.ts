@@ -49,7 +49,6 @@ export async function getCurrentAppUser() {
     .values({
       authUserId: sessionUser.id,
       email: sessionUser.email,
-      username: sessionUser.username ?? sessionUser.email.split("@")[0],
       displayName: sessionUser.name ?? sessionUser.email.split("@")[0],
       role: "member"
     })

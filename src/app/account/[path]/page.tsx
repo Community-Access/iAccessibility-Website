@@ -13,7 +13,7 @@ export default async function AccountPage() {
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">
           <div>
             <dt className="text-sm font-semibold text-muted-foreground">Name</dt>
-            <dd>{user.displayName || user.username || "Member"}</dd>
+            <dd>{user.displayName || "Member"}</dd>
           </div>
           <div>
             <dt className="text-sm font-semibold text-muted-foreground">Email</dt>

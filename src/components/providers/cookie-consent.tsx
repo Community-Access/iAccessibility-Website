@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 
 const COOKIE_KEY = "iaccessibility_cookie_consent";
 
 export function CookieConsent() {
+  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const acceptButtonRef = useRef<HTMLButtonElement>(null);
   const preferencesButtonRef = useRef<HTMLButtonElement>(null);
   const shouldReturnFocusRef = useRef(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (visible && shouldReturnFocusRef.current) {
@@ -58,20 +62,21 @@ export function CookieConsent() {
     setAnnouncement("Cookie preferences reopened.");
   }
 
-  return (
+  // The banner and its live region are portaled to <body> so they are NOT
+  // nested inside the footer's contentinfo landmark. The banner is a single,
+  // purposefully-labelled top-level region (the standard cookie-notice pattern).
+  const overlay = (
     <>
       <div className="sr-only" role="status" aria-live="polite">
         {announcement}
       </div>
       {visible ? (
-        <section
-          aria-labelledby="cookie-consent-heading"
+        <div
+          role="region"
+          aria-label="Cookie consent"
           className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background p-4 shadow-lg"
         >
           <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 id="cookie-consent-heading" className="sr-only">
-              Cookie consent
-            </h2>
             <p className="text-sm text-foreground">
               iAccessibility uses essential cookies now. Analytics will only
               load after you accept.
@@ -85,13 +90,19 @@ export function CookieConsent() {
               </Button>
             </div>
           </div>
-        </section>
+        </div>
       ) : null}
+    </>
+  );
+
+  return (
+    <>
+      {mounted ? createPortal(overlay, document.body) : null}
       <button
         ref={preferencesButtonRef}
         type="button"
         onClick={reopen}
-        className="text-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="text-sm text-slate-100 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
       >
         Cookie preferences
       </button>

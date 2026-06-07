@@ -32,8 +32,8 @@ export const users = pgTable(
     authUserId: text("auth_user_id").notNull().unique(),
     legacyWpUserId: integer("legacy_wp_user_id").unique(),
     email: text("email").notNull().unique(),
-    username: text("username"),
     displayName: text("display_name"),
+    avatarUrl: text("avatar_url"),
     role: userRole("role").notNull().default("member"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow()
