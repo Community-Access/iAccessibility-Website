@@ -1,206 +1,78 @@
-import { redirect } from "next/navigation";
-import { desc, eq } from "drizzle-orm";
+import Link from "next/link";
+import { count, eq } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
 import { blogPosts, directoryEntries } from "@/db/schema";
-import { canModerate, getCurrentAppUser } from "@/lib/auth/server";
-import { dateLabel } from "@/lib/content/wordpress";
-import { decideDirectoryEntry, decideReportPost } from "./actions";
+import { canAdmin, getCurrentAppUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
-function ReviewActions({
-  id,
-  action,
-  label
-}: {
-  id: number;
-  action: (formData: FormData) => Promise<void>;
-  label: string;
-}) {
-  return (
-    <form action={action} className="flex flex-wrap gap-2">
-      <input type="hidden" name="id" value={id} />
-      <button
-        type="submit"
-        name="decision"
-        value="approved"
-        aria-label={`Approve ${label}`}
-        className="rounded-md bg-[#0066bf] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
-      >
-        Approve
-      </button>
-      <button
-        type="submit"
-        name="decision"
-        value="rejected"
-        aria-label={`Reject ${label}`}
-        className="rounded-md border border-[#b91c1c] px-3 py-1.5 text-sm font-semibold text-[#b91c1c] hover:bg-[#b91c1c] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b91c1c] focus-visible:ring-offset-2"
-      >
-        Reject
-      </button>
-    </form>
-  );
+async function pendingCount(table: typeof blogPosts | typeof directoryEntries) {
+  if (!hasDatabase || !db) return 0;
+  const [row] = await db
+    .select({ value: count() })
+    .from(table)
+    .where(eq(table.status, "pending"));
+  return row?.value ?? 0;
 }
 
-export default async function AdminPage() {
+export default async function AdminDashboard() {
   const user = await getCurrentAppUser();
+  const isAdmin = canAdmin(user?.role);
 
-  if (!user) redirect("/auth/sign-in");
-  if (!canModerate(user.role)) redirect("/");
-
-  const [pendingPosts, pendingDirectory] =
-    hasDatabase && db
-      ? await Promise.all([
-          db
-            .select()
-            .from(blogPosts)
-            .where(eq(blogPosts.status, "pending"))
-            .orderBy(desc(blogPosts.createdAt))
-            .limit(50),
-          db
-            .select()
-            .from(directoryEntries)
-            .where(eq(directoryEntries.status, "pending"))
-            .orderBy(desc(directoryEntries.createdAt))
-            .limit(50)
-        ])
-      : [[], []];
+  const [pendingPosts, pendingDirectory] = await Promise.all([
+    pendingCount(blogPosts),
+    pendingCount(directoryEntries)
+  ]);
+  const pendingTotal = pendingPosts + pendingDirectory;
 
   return (
-    <div className="wp-container space-y-8">
+    <div className="space-y-8">
       <section className="wp-article">
-        <h1 className="text-3xl font-bold">Admin Review Queue</h1>
+        <h1 className="text-3xl font-bold">Admin dashboard</h1>
         <p className="mt-3 text-[#595959]">
-          Approve or reject pending member submissions. The submitter is emailed
-          automatically when you make a decision.
+          {isAdmin
+            ? "You have full administrator access."
+            : "You have moderator access: you can review and decide on pending submissions."}
         </p>
       </section>
 
-      <section className="wp-article" aria-labelledby="pending-posts-heading">
-        <h2 id="pending-posts-heading" className="mb-4 text-2xl font-semibold">
-          Pending Report Posts
+      <section className="wp-article" aria-labelledby="dashboard-review-heading">
+        <h2 id="dashboard-review-heading" className="text-2xl font-semibold">
+          Review queue
         </h2>
-        {pendingPosts.length === 0 ? (
-          <p>No pending report posts.</p>
-        ) : (
-          <>
-            <div className="space-y-4 md:hidden" role="list" aria-label="Pending report posts">
-              {pendingPosts.map((post) => (
-                <article key={post.id} role="listitem" className="border-b border-border py-4">
-                  <h3 className="font-semibold">{post.title}</h3>
-                  <p className="text-sm text-[#595959]">
-                    {dateLabel(post.createdAt.toISOString())}
-                  </p>
-                  <div className="mt-3">
-                    <ReviewActions
-                      id={post.id}
-                      action={decideReportPost}
-                      label={`report: ${post.title}`}
-                    />
-                  </div>
-                </article>
-              ))}
-            </div>
-            <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
-              <table className="w-full" aria-label="Pending report posts">
-                <thead>
-                  <tr className="bg-muted">
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      Title
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      Created
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingPosts.map((post) => (
-                    <tr key={post.id} className="border-t border-border">
-                      <td className="px-4 py-3">{post.title}</td>
-                      <td className="px-4 py-3">
-                        {dateLabel(post.createdAt.toISOString())}
-                      </td>
-                      <td className="px-4 py-3">
-                        <ReviewActions
-                          id={post.id}
-                          action={decideReportPost}
-                          label={`report: ${post.title}`}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        <p className="mt-2 text-[#222222]">
+          {pendingTotal === 0
+            ? "Nothing is waiting for review right now."
+            : `${pendingTotal} item${pendingTotal === 1 ? "" : "s"} waiting for review (${pendingPosts} report post${pendingPosts === 1 ? "" : "s"}, ${pendingDirectory} directory ${pendingDirectory === 1 ? "entry" : "entries"}).`}
+        </p>
+        <p className="mt-4">
+          <Link
+            href="/admin/review"
+            className="inline-flex rounded-md bg-[#0066bf] px-4 py-2 font-semibold text-white no-underline hover:bg-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+          >
+            Open the review queue
+          </Link>
+        </p>
       </section>
 
-      <section className="wp-article" aria-labelledby="pending-directory-heading">
-        <h2 id="pending-directory-heading" className="mb-4 text-2xl font-semibold">
-          Pending Directory Entries
-        </h2>
-        {pendingDirectory.length === 0 ? (
-          <p>No pending directory entries.</p>
-        ) : (
-          <>
-            <div className="space-y-4 md:hidden" role="list" aria-label="Pending directory entries">
-              {pendingDirectory.map((entry) => (
-                <article key={entry.id} role="listitem" className="border-b border-border py-4">
-                  <h3 className="font-semibold">{entry.appName}</h3>
-                  <p className="text-sm text-[#595959]">
-                    {dateLabel(entry.createdAt.toISOString())}
-                  </p>
-                  <div className="mt-3">
-                    <ReviewActions
-                      id={entry.id}
-                      action={decideDirectoryEntry}
-                      label={`app: ${entry.appName}`}
-                    />
-                  </div>
-                </article>
-              ))}
-            </div>
-            <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
-              <table className="w-full" aria-label="Pending directory entries">
-                <thead>
-                  <tr className="bg-muted">
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      App
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      Created
-                    </th>
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-semibold">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingDirectory.map((entry) => (
-                    <tr key={entry.id} className="border-t border-border">
-                      <td className="px-4 py-3">{entry.appName}</td>
-                      <td className="px-4 py-3">
-                        {dateLabel(entry.createdAt.toISOString())}
-                      </td>
-                      <td className="px-4 py-3">
-                        <ReviewActions
-                          id={entry.id}
-                          action={decideDirectoryEntry}
-                          label={`app: ${entry.appName}`}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </section>
+      {isAdmin ? (
+        <section className="wp-article" aria-labelledby="dashboard-admin-heading">
+          <h2 id="dashboard-admin-heading" className="text-2xl font-semibold">
+            Content management
+          </h2>
+          <p className="mt-2 text-[#222222]">
+            Create and manage blog posts with the block editor.
+          </p>
+          <p className="mt-4">
+            <Link
+              href="/admin/posts"
+              className="inline-flex rounded-md bg-[#0066bf] px-4 py-2 font-semibold text-white no-underline hover:bg-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+            >
+              Manage posts
+            </Link>
+          </p>
+        </section>
+      ) : null}
     </div>
   );
 }
