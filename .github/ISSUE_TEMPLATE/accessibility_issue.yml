@@ -1,0 +1,33 @@
+name: Accessibility issue
+description: Report an accessibility barrier on the site.
+title: "[A11y]: "
+labels: ["accessibility"]
+body:
+  - type: textarea
+    id: barrier
+    attributes:
+      label: What is the barrier
+      description: Describe the accessibility problem and what you expected instead.
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page or URL
+      description: Where did you find this barrier?
+    validations:
+      required: false
+  - type: input
+    id: assistive-tech
+    attributes:
+      label: Assistive technology
+      description: For example, VoiceOver, NVDA, JAWS, keyboard only, or screen magnifier.
+    validations:
+      required: false
+  - type: input
+    id: wcag
+    attributes:
+      label: Related WCAG criterion
+      description: Optional. If you know the WCAG success criterion, add it here.
+    validations:
+      required: false

@@ -1,0 +1,37 @@
+name: Bug report
+description: Something on the site is not working correctly.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Describe the bug, and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the steps so we can see the bug ourselves.
+      placeholder: |
+        1. Go to ...
+        2. Click on ...
+        3. See the error
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page or URL
+      description: Where did this happen?
+    validations:
+      required: false
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and device
+      description: For example, Safari on iPhone, or Chrome on Windows.
+    validations:
+      required: false

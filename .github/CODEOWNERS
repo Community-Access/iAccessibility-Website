@@ -1,17 +1,18 @@
 # CODEOWNERS — iAccessibility Website
 #
-# Database changes are restricted to community leaders. The paths below require
-# review and approval from the community-leaders team before they can be merged.
+# Database changes are restricted to Community Access administrators. The paths below
+# require review and approval from the administrators team before they can be merged.
 #
-# NOTE: Enforcement requires (1) the @Community-Access/community-leaders team to exist
-# with the right members, and (2) branch protection on `main` with "Require review from
-# Code Owners" enabled. Until both are in place, these entries are documentation only.
+# NOTE: Enforcement requires (1) the @Community-Access/administrators team to exist with
+# the right members, and (2) branch protection on `main` and `develop` with "Require
+# review from Code Owners" enabled. Until both are in place, these entries are
+# documentation only.
 #
-# Database / migrations / schema — community leaders only
-/migrations/                @Community-Access/community-leaders
-/db/                        @Community-Access/community-leaders
-/prisma/                    @Community-Access/community-leaders
-/drizzle/                   @Community-Access/community-leaders
-**/schema.ts                @Community-Access/community-leaders
-**/schema.sql               @Community-Access/community-leaders
-.env.example                @Community-Access/community-leaders
+# Database / migrations / schema — Community Access administrators only
+/migrations/                @Community-Access/administrators
+/db/                        @Community-Access/administrators
+/prisma/                    @Community-Access/administrators
+/drizzle/                   @Community-Access/administrators
+**/schema.ts                @Community-Access/administrators
+**/schema.sql               @Community-Access/administrators
+.env.example                @Community-Access/administrators

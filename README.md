@@ -17,9 +17,17 @@ in a separate repository.
 
 ## Contributing
 
-Contributions are welcome via pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) for
-how to propose changes, our accessibility standards, and the rules around database
-changes (which are restricted to community leaders).
+Contributions are welcome via pull request. We follow **Git flow** — branch off
+`develop` and open your PR against `develop`. See [CONTRIBUTING.md](CONTRIBUTING.md) for
+the full workflow, our accessibility standards, and the rules around database changes
+(which are restricted to Community Access administrators). Please also read our
+[Code of Conduct](CODE_OF_CONDUCT.md) and [Security Policy](SECURITY.md).
+
+## Contributors
+
+Thanks to everyone building an accessible web.
+
+[![Image showing the avatars of contributors to the iAccessibility Website repository](https://contrib.rocks/image?repo=Community-Access/iAccessibility-Website)](https://github.com/Community-Access/iAccessibility-Website/graphs/contributors)
 
 ## Status
 
