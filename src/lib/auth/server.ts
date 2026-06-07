@@ -42,7 +42,20 @@ export async function getCurrentAppUser() {
     where: eq(users.email, sessionUser.email)
   });
 
-  if (byEmail) return byEmail;
+  if (byEmail) {
+    // A record already exists for this email (e.g. a migrated/seeded admin).
+    // "Claim" it by linking it to the current auth identity so future logins
+    // resolve directly by auth id instead of falling back to email.
+    if (byEmail.authUserId !== sessionUser.id) {
+      const [linked] = await db
+        .update(users)
+        .set({ authUserId: sessionUser.id, updatedAt: new Date() })
+        .where(eq(users.id, byEmail.id))
+        .returning();
+      return linked ?? byEmail;
+    }
+    return byEmail;
+  }
 
   const inserted = await db
     .insert(users)
