@@ -9,15 +9,22 @@ type ContentListProps = {
   title: string;
   items: ContentSummary[];
   emptyLabel?: string;
+  viewAllHref?: string;
+  viewAllLabel?: string;
 };
 
-export function ContentList({ title, items, emptyLabel }: ContentListProps) {
+export function ContentList({
+  title,
+  items,
+  emptyLabel,
+  viewAllHref,
+  viewAllLabel
+}: ContentListProps) {
+  const headingId = `${title.toLowerCase().replace(/\W+/g, "-")}-heading`;
+
   return (
-    <section aria-labelledby={`${title.toLowerCase().replace(/\W+/g, "-")}-heading`}>
-      <h2
-        id={`${title.toLowerCase().replace(/\W+/g, "-")}-heading`}
-        className="mb-4 text-2xl font-semibold"
-      >
+    <section>
+      <h2 id={headingId} className="mb-4 text-2xl font-semibold">
         {title}
       </h2>
       {items.length === 0 ? (
@@ -61,6 +68,16 @@ export function ContentList({ title, items, emptyLabel }: ContentListProps) {
           ))}
         </div>
       )}
+      {viewAllHref && viewAllLabel ? (
+        <p className="mt-5">
+          <Link
+            href={viewAllHref}
+            className="font-semibold text-[#0f6cba] underline underline-offset-2 hover:text-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf] rounded"
+          >
+            {viewAllLabel}
+          </Link>
+        </p>
+      ) : null}
     </section>
   );
 }

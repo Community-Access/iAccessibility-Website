@@ -61,7 +61,7 @@ export default async function AdminDashboard() {
             Content management
           </h2>
           <p className="mt-2 text-[#222222]">
-            Create and manage blog posts with the block editor.
+            Create and manage blog posts with an accessible editor.
           </p>
           <p className="mt-4">
             <Link

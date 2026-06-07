@@ -70,18 +70,18 @@ export default async function HomePage() {
             </p>
           </section>
 
-          <ContentList title="Latest Posts" items={reports.slice(0, 6)} />
+          <ContentList
+            title="Latest Posts"
+            items={reports.slice(0, 6)}
+            viewAllHref="/blog"
+            viewAllLabel="View all posts"
+          />
 
           {episodes.length > 0 ? (
-            <section aria-labelledby="latest-iacast-heading">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <h2 id="latest-iacast-heading" className="text-2xl font-semibold">
-                  Latest iACast Episodes
-                </h2>
-                <Link href="/iacast-network" className="font-semibold">
-                  Browse all episodes
-                </Link>
-              </div>
+            <section>
+              <h2 className="mb-4 text-2xl font-semibold">
+                Latest iACast Episodes
+              </h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {episodes.map((episode) => {
                   const duration = formatDuration(episode.durationSeconds);
@@ -128,19 +128,22 @@ export default async function HomePage() {
                   );
                 })}
               </div>
+              <p className="mt-5">
+                <Link
+                  href="/iacast-network"
+                  className="font-semibold text-[#0f6cba] underline underline-offset-2 hover:text-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf] rounded"
+                >
+                  View all podcasts
+                </Link>
+              </p>
             </section>
           ) : null}
 
           {directory.length > 0 ? (
-            <section aria-labelledby="latest-directory-heading">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <h2 id="latest-directory-heading" className="text-2xl font-semibold">
-                  Latest From The Directory
-                </h2>
-                <Link href="/app-directory" className="font-semibold">
-                  Browse all apps
-                </Link>
-              </div>
+            <section>
+              <h2 className="mb-4 text-2xl font-semibold">
+                Latest App Directory Entries
+              </h2>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {directory.slice(0, 6).map((entry) => (
                   <article
@@ -165,6 +168,14 @@ export default async function HomePage() {
                   </article>
                 ))}
               </div>
+              <p className="mt-5">
+                <Link
+                  href="/app-directory"
+                  className="font-semibold text-[#0f6cba] underline underline-offset-2 hover:text-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf] rounded"
+                >
+                  View all directory entries
+                </Link>
+              </p>
             </section>
           ) : null}
       </div>

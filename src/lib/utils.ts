@@ -72,6 +72,31 @@ export function demoteHeadings(html: string) {
   });
 }
 
+export function normalizeEmbeddedHeadings(html: string) {
+  let previousHeadingLevel = 1;
+  const headingStack: number[] = [];
+
+  return html.replace(
+    /<(\/?)h([1-6])(\s[^>]*)?>/gi,
+    (_match, slash, level, attrs = "") => {
+      if (slash) {
+        return `</h${headingStack.pop() ?? 2}>`;
+      }
+
+      const sourceLevel = Number(level);
+      let safeLevel = sourceLevel <= 1 ? 2 : sourceLevel;
+      if (safeLevel > previousHeadingLevel + 1) {
+        safeLevel = previousHeadingLevel + 1;
+      }
+      safeLevel = Math.min(6, Math.max(2, safeLevel));
+      previousHeadingLevel = safeLevel;
+      headingStack.push(safeLevel);
+
+      return `<h${safeLevel}${attrs}>`;
+    }
+  );
+}
+
 export function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (char) => {
     const map: Record<string, string> = {

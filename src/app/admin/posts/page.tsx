@@ -58,7 +58,7 @@ export default async function AdminPostsPage() {
       <section className="wp-article">
         <h1 className="text-3xl font-bold">Posts</h1>
         <p className="mt-3 text-[#595959]">
-          Manage blog posts and write new ones with the block editor.
+          Manage blog posts and write new ones with an accessible editor.
         </p>
         <p className="mt-4">
           <Link
@@ -81,7 +81,7 @@ export default async function AdminPostsPage() {
           items={recent}
           getItemKey={(p) => String(p.id)}
           emptyTitle="No posts yet"
-          emptyMessage="Create your first post with the block editor."
+          emptyMessage="Create your first post with the accessible editor."
         />
       </section>
     </div>

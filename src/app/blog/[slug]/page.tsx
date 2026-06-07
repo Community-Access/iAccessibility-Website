@@ -1,8 +1,53 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BrandedMediaFrame } from "@/components/layout/branded-media-frame";
+import { SITE_FALLBACK_IMAGE_URL } from "@/lib/branding";
 import { getPostBySlug, dateLabel } from "@/lib/content/wordpress";
+import { normalizeEmbeddedHeadings } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
+  if (!post) return { title: "Post not found" };
+
+  const description =
+    post.excerpt || "Read the latest accessibility technology reporting from iAccessibility.";
+  const imageUrl = post.imageUrl || SITE_FALLBACK_IMAGE_URL;
+  const imageAlt = post.imageUrl
+    ? post.imageAlt || `${post.title} featured image`
+    : "iAccessibility logo";
+
+  return {
+    title: post.title,
+    description,
+    openGraph: {
+      type: "article",
+      title: post.title,
+      description,
+      url: `/blog/${post.slug}`,
+      publishedTime: post.date,
+      authors: post.author ? [post.author] : undefined,
+      images: [
+        {
+          url: imageUrl,
+          alt: imageAlt
+        }
+      ]
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description,
+      images: [{ url: imageUrl, alt: imageAlt }]
+    }
+  };
+}
 
 export default async function BlogPostPage({
   params
@@ -39,7 +84,7 @@ export default async function BlogPostPage({
         />
         <div
           className="wp-prose"
-          dangerouslySetInnerHTML={{ __html: post.html }}
+          dangerouslySetInnerHTML={{ __html: normalizeEmbeddedHeadings(post.html) }}
         />
       </div>
     </article>

@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-// BlockNote relies on browser APIs, so load it client-only.
+// The editor uses browser focus and clipboard APIs, so load it client-only.
 const PostEditor = dynamic(() => import("./post-editor"), {
   ssr: false,
   loading: () => <p className="wp-article">Loading the editor…</p>

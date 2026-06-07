@@ -2,8 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BrandedMediaFrame } from "@/components/layout/branded-media-frame";
+import { SITE_FALLBACK_IMAGE_URL } from "@/lib/branding";
 import { dateLabel, getPodcastEpisodeBySlug } from "@/lib/content/wordpress";
-import { demoteHeadings, durationSpoken, formatDuration } from "@/lib/utils";
+import {
+  durationSpoken,
+  formatDuration,
+  normalizeEmbeddedHeadings,
+  stripHtml
+} from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +21,38 @@ export async function generateMetadata({
   const { slug } = await params;
   const episode = await getPodcastEpisodeBySlug(slug);
   if (!episode) return { title: "Episode not found" };
-  return { title: `${episode.title} - iACast Network` };
+  const title = `${episode.title} - iACast Network`;
+  const description =
+    stripHtml(episode.bodyHtml).slice(0, 220) ||
+    "Listen to the iACast Network archive from iAccessibility.";
+  const imageUrl = episode.image || SITE_FALLBACK_IMAGE_URL;
+  const imageAlt = episode.image
+    ? `${episode.title} episode artwork`
+    : "iAccessibility logo";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "article",
+      title,
+      description,
+      url: `/iacast-network/${episode.slug}`,
+      publishedTime: episode.date ?? undefined,
+      images: [
+        {
+          url: imageUrl,
+          alt: imageAlt
+        }
+      ]
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [{ url: imageUrl, alt: imageAlt }]
+    }
+  };
 }
 
 export default async function EpisodePage({
@@ -110,7 +147,9 @@ export default async function EpisodePage({
           <section aria-label="Show notes">
             <div
               className="wp-prose"
-              dangerouslySetInnerHTML={{ __html: demoteHeadings(episode.bodyHtml) }}
+              dangerouslySetInnerHTML={{
+                __html: normalizeEmbeddedHeadings(episode.bodyHtml)
+              }}
             />
           </section>
         ) : null}

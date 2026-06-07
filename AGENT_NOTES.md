@@ -206,9 +206,9 @@ Last updated: 2026-06-07
 - Tables use a light-themed port of Start-testing's accessible `ItemTable`
   (`src/components/ui/item-table.tsx`): caption+count, scope col/row, keyboard-scrollable region,
   skip-to-top/bottom links.
-- BlockNote editor at `/admin/posts/new` (admin-only): title, featured image w/ required alt,
-  block body, draft/publish (publish announces on social). Images upload to Spaces via
-  `/api/admin/media/upload`. Accessible field-error focus, remove-image, file focus ring.
+- Custom accessible block editor at `/admin/posts/new` (admin-only): title, featured image w/
+  required alt, block body, draft/publish (publish announces on social). Images upload to Spaces
+  via `/api/admin/media/upload`. Field errors focus the exact invalid control.
 - Auto-publish: admin/mod report submissions skip review and post to social
   (`src/lib/social`: Mastodon wired; X/Facebook gated on env).
 
@@ -230,9 +230,9 @@ Last updated: 2026-06-07
   real auth account).
 
 ### Open accessibility investigation
-- User reported an "unlabeled button on one of the controls." All buttons in our own code have
-  text or `aria-label`, and the deployed /auth/sign-in a11y tree is clean. Likely a third-party
-  widget (Neon Auth AuthView or the BlockNote editor toolbar). Needs the exact page/control to fix.
+- User reported an "unlabeled button on one of the controls." All buttons in our own editor code
+  now have visible text; the deployed /auth/sign-in a11y tree was previously clean. If this recurs,
+  capture the exact page/control because it may come from a third-party Neon Auth widget.
 
 ### Session log — 2026-06-07 (Claude, App Directory redesign + migration audit)
 
@@ -412,6 +412,93 @@ DONE:
   image alt when present. The visible fallback label uses WordPress active blue `#035a9e`; checked
   contrast against the gradient stops at 7.09:1 on white, 6.28:1 on `#eaf2fb`, and 5.31:1 on
   `#cfe1f4`.
+
+### Session log — 2026-06-07 (Codex, homepage landmarks + accessible CMS editor)
+
+User directives:
+- Fix random ARIA/region landmarks on the homepage.
+- Move "View all" links to the end of Latest Posts, Latest iACast Episodes, and Latest App
+  Directory sections.
+- Keep section headings as H2 and card titles as H3.
+- Build an accessible CMS/block editor similar in spirit to WordPress/VS Code command workflows:
+  paragraph default, slash inserter, command palette, headings H1-H6, images, links, lists, Markdown,
+  RTF/rich paste, plain text, and save-time accessibility validation.
+- Update this file with findings.
+
+DONE:
+- Homepage teaser sections now use plain `<section>` elements without `aria-labelledby`, so they no
+  longer become noisy named `region` landmarks. H2/H3 hierarchy is preserved. `ContentList` keeps the
+  generated H2 `id` (for `/blog` and `/report` pagination hash links) but does NOT connect that id to
+  the section as an accessible name.
+- "View all posts", "View all podcasts", and "View all directory entries" are at the END of their
+  sections per user preference. Keyboard specialist noted that before-grid links reduce tab effort;
+  user preference currently wins. Future compromise: provide both before and after if desired.
+- Admin CMS exists:
+  - `/admin` dashboard
+  - `/admin/posts`
+  - `/admin/posts/new`
+  - guarded by `canAdmin`; Taylor previously confirmed as `admin` in Neon.
+- Replaced reliance on BlockNote/Mantine for the post composer. Current custom editor is built from
+  native form controls and explicit ARIA:
+  - paragraph default block
+  - slash inserter opens a keyboard listbox from the start of a block
+  - Ctrl/Cmd+K opens a native `<dialog>` command palette
+  - commands: Paragraph, Heading 1-6, Image, Bulleted list, Numbered list, Quote
+  - image blocks support upload or URL, caption, alt text, and an explicit "decorative image" checkbox
+  - Markdown paste parses headings/lists/quotes/images into blocks; rich HTML paste parses headings,
+    lists, quotes, figures/images, and paragraphs into blocks; plain text remains editable plain text
+  - inline Markdown serializes links, bold, and italic on save
+  - save-time accessibility validation blocks body H1s (post title is page H1), skipped heading levels,
+    non-decorative images without alt text, and ambiguous/unsafe Markdown link text; invalid fields
+    receive focus and `aria-describedby` points to the error
+  - command palette uses native `showModal()`, labelled dialog, initial search focus, Escape/Close,
+    focus return, `aria-haspopup="dialog"` trigger, conditional `aria-controls`, combobox/listbox with
+    `aria-autocomplete="list"`, unique command keys, and a polite command-result-count live region.
+- Added site-wide social preview metadata in `src/app/layout.tsx` using the high-resolution iA logo
+  with Open Graph/Twitter alt text.
+- Added per-post/per-episode Open Graph + Twitter metadata. Blog/episode detail image alt no longer
+  lies by calling a real post image "iAccessibility logo"; if no image-specific alt exists, it falls
+  back to a title-based description.
+- Added `normalizeEmbeddedHeadings()` and applied it to blog posts and iACast show notes so imported
+  WordPress/legacy HTML cannot introduce duplicate body H1s or skip heading levels when rendered.
+- Verified categories are migrated in live Neon on 2026-06-07:
+  - `blog_categories`: 244
+  - `post_categories`: 2,278
+  - `directory_categories`: 231
+  - `directory_entry_categories`: 248
+- Verification:
+  - `npm run typecheck` passed after restoring missing local `typescript` dependency with `npm install`.
+  - `npm run typecheck` passed again after the final editor accessibility patches.
+  - `npm run build` passed after the final editor accessibility patches.
+  - `npm install` reported 10 existing audit findings (6 moderate, 4 high); DID NOT run `npm audit fix`
+    because that can introduce dependency churn outside this task.
+
+ACCESSIBILITY AGENT FINDINGS ADDRESSED:
+- `aria-specialist`: homepage named sections were the source of noisy regions; removed the naming.
+- `keyboard-navigator`: restoring `latest-posts-heading` H2 id avoids breaking existing hash links.
+- `modal-specialist`: custom command palette modal was replaced with native `<dialog>` + focus return.
+- `forms-specialist`: body/image validation now associates error text with the exact failing field.
+- `alt-text-headings`: blog/episode body HTML now normalizes headings; social image alt is no longer
+  inaccurate; decorative image blocks are supported.
+- `live-region-controller`: repeated status messages now clear/re-announce, saving is announced,
+  featured-image upload completion is announced, command-palette status clears on close/open, and the
+  block-inserter status is shorter.
+- `contrast-master`: no contrast/focus blockers; link/focus/error colors pass AA. Non-blocking notes:
+  disabled move buttons and decorative-alt disabled inputs could use explicit disabled colors later,
+  and selected listbox options could add a non-color selected cue.
+- `link-checker`: homepage/list links are descriptive. Editor-generated Markdown links now block vague
+  labels like "click here", raw URL labels, repeated labels pointing to different destinations, and
+  file/audio links without file type or purpose in the text.
+- `accessibility-lead`: fixed conditional `aria-controls` for block menus, command-palette expanded
+  state/conditional control target, no-results text outside the listbox, H1 body guidance, and
+  sitewide Twitter image alt.
+
+NOTES:
+- The old BlockNote dependencies are still present in `package.json` for now, but the active post
+  editor no longer imports BlockNote. Removing those dependencies can be done in a small cleanup pass
+  after user confirms the custom editor direction.
+- WordPress references used during this pass: official Block Editor Handbook docs for keyboard
+  shortcuts, command palette (`cmd+k`), block editor architecture, and Gutenberg accessibility testing.
 
 ### Still pending
 - OTHER PODCAST shows — 5 remaining Captivate shows await Michael's naming direction.
