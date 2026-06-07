@@ -15,8 +15,9 @@ export default async function AuthPage({
           {mode === "sign-up" ? "Sign Up" : "Log In"}
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Membership is free. Existing WordPress members can claim access by
-          using the same email address.
+          {mode === "sign-up"
+            ? "Create your iAccessibility account to submit content and join the community."
+            : "Sign in to your iAccessibility account."}
         </p>
       </header>
       <AuthPageView mode={mode} />
