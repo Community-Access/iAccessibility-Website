@@ -1,0 +1,695 @@
+{
+ "blindgirl": {
+  "key": "backups/2026-06-06/accounts/blindgirl.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "dougwakefield": {
+  "key": "backups/2026-06-06/accounts/dougwakefield.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "beckyknaub": {
+  "key": "backups/2026-06-06/accounts/beckyknaub.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "brailleslates": {
+  "key": "backups/2026-06-06/accounts/brailleslates.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "keribishop": {
+  "key": "backups/2026-06-06/accounts/keribishop.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "programmingfe": {
+  "key": "backups/2026-06-06/accounts/programmingfe.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "bishoplink": {
+  "key": "backups/2026-06-06/accounts/bishoplink.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "accesswatch": {
+  "key": "backups/2026-06-06/accounts/accesswatch.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "karenscove": {
+  "key": "backups/2026-06-06/accounts/karenscove.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "colemantech": {
+  "key": "backups/2026-06-06/accounts/colemantech.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "spanishwithkarla": {
+  "key": "backups/2026-06-06/accounts/spanishwithkarla.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "ccconcepts": {
+  "key": "backups/2026-06-06/accounts/ccconcepts.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "blindaccess": {
+  "key": "backups/2026-06-06/accounts/blindaccess.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "laurelwheeler": {
+  "key": "backups/2026-06-06/accounts/laurelwheeler.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "handsonsafety": {
+  "key": "backups/2026-06-06/accounts/handsonsafety.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "whitecaneday": {
+  "key": "backups/2026-06-06/accounts/whitecaneday.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "acbaustin": {
+  "key": "backups/2026-06-06/accounts/acbaustin.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "csedesigns": {
+  "key": "backups/2026-06-06/accounts/csedesigns.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "techopolis": {
+  "key": "backups/2026-06-06/accounts/techopolis.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": []
+ },
+ "debbiehazelton": {
+  "key": "backups/2026-06-06/accounts/debbiehazelton.tar.gz",
+  "audio_count": 0,
+  "audio_gb": 0.0,
+  "found": [
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podcast-player/frontend/images/icons.svg",
+    "bytes": 156003
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podcast-player/frontend/inc/class-icon-loader.php",
+    "bytes": 159390
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podcast-player/frontend/css/podcast-player-public-rtl.css",
+    "bytes": 109249
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podcast-player/frontend/css/podcast-player-editor-rtl.css",
+    "bytes": 109734
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/images/about/home.png",
+    "bytes": 117835
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/lib/modules/social/images/icons/bluesky.svg",
+    "bytes": 157809
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/lib/modules/podlove_web_player/player_v4/dist/embed.js",
+    "bytes": 145060
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/lib/modules/podlove_web_player/player_v4/dist/4.5.10/player.js",
+    "bytes": 363057
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/lib/modules/podlove_web_player/player_v4/dist/4.5.10/vendor.js",
+    "bytes": 580815
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/lib/modules/podlove_web_player/player_v4/dist/4.5.10/bootstrap.js",
+    "bytes": 363291
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/lib/modules/subscribe_button/js/dist/javascripts/app.js",
+    "bytes": 146259
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/lib/modules/subscribe_button/dist/javascripts/app.js",
+    "bytes": 146450
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/vendor/composer/autoload_classmap.php",
+    "bytes": 115765
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/vendor/composer/ca-bundle/res/cacert.pem",
+    "bytes": 225076
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/vendor/composer/autoload_static.php",
+    "bytes": 132818
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/js/admin/d3.min.js",
+    "bytes": 236746
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/js/admin/ace/ace.js",
+    "bytes": 345827
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/js/admin/dc.js",
+    "bytes": 441826
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/js/dist/podcast-stats.js",
+    "bytes": 124689
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/js/dist/app.js",
+    "bytes": 400095
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/changelog.txt",
+    "bytes": 146222
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/vendor-prefixed/matomo/matomo/device-detector/regexes/device/mobiles.yml",
+    "bytes": 1072358
+   },
+   {
+    "path": "debbiehazelton/homedir/public_html/wp-content/plugins/podlove-podcasting-plugin-for-wordpress/client/dist/client.js",
+    "bytes": 710078
+   }
+  ]
+ },
+ "acbda": {
+  "key": "backups/2026-06-06/accounts/acbda.tar.gz",
+  "audio_count": 2,
+  "audio_gb": 0.05,
+  "found": [
+   {
+    "path": "acbda/homedir/public_html/wp-content/uploads/2025/04/medical-1.mp3",
+    "bytes": 29410081
+   },
+   {
+    "path": "acbda/homedir/public_html/wp-content/uploads/2025/04/medical.mp3",
+    "bytes": 29410081
+   }
+  ]
+ },
+ "azcb": {
+  "key": "backups/2026-06-06/accounts/azcb.tar.gz",
+  "audio_count": 1,
+  "audio_gb": 0.01,
+  "found": [
+   {
+    "path": "azcb/homedir/public_html/wp-content/uploads/2021/03/AZCB 2021 convention promotional interview.mp3",
+    "bytes": 12982918
+   }
+  ]
+ },
+ "jeffbis": {
+  "key": "backups/2026-06-06/accounts/jeffbis.tar.gz",
+  "audio_count": 2,
+  "audio_gb": 0.01,
+  "found": [
+   {
+    "path": "jeffbis/homedir/public_html/wp-content/uploads/2009/01/chenille-sisters-no-one-like-you.mp3",
+    "bytes": 6649990
+   },
+   {
+    "path": "jeffbis/homedir/public_html/wp-content/uploads/2009/01/declan.mp3",
+    "bytes": 9341704
+   }
+  ]
+ },
+ "iceb": {
+  "key": "backups/2026-06-06/accounts/iceb.tar.gz",
+  "audio_count": 108,
+  "audio_gb": 5.87,
+  "found": [
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/williams.mp3",
+    "bytes": 24735245
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/wilkins.mp3",
+    "bytes": 13542716
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/howell.mp3",
+    "bytes": 8767532
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/firman.mp3",
+    "bytes": 22308198
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/dapice.mp3",
+    "bytes": 15791796
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/roberts.mp3",
+    "bytes": 5168109
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/foulkes.mp3",
+    "bytes": 28251494
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/martiniello.mp3",
+    "bytes": 12725187
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/goulden.mp3",
+    "bytes": 17748681
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/fitzpatrick.mp3",
+    "bytes": 14585148
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/randall.mp3",
+    "bytes": 16653210
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/graves.mp3",
+    "bytes": 25071660
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/khataminia.mp3",
+    "bytes": 11350979
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/herzberg.mp3",
+    "bytes": 30879705
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/bowden.mp3",
+    "bytes": 15591552
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/riessen.mp3",
+    "bytes": 12972995
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/dunnam.mp3",
+    "bytes": 14827940
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/papers20/gonzalez.mp3",
+    "bytes": 15889138
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-09_session_14.mp3",
+    "bytes": 38521472
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-06_session_1.mp3",
+    "bytes": 42043301
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-10_session_18.mp3",
+    "bytes": 10412855
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-08_session_9.mp3",
+    "bytes": 4659934
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-10_session_16.mp3",
+    "bytes": 21771758
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-06_session_2-part2.mp3",
+    "bytes": 33978513
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-08_session_10.mp3",
+    "bytes": 29718729
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-06_session_4.mp3",
+    "bytes": 44639450
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-06_session_2-part1.mp3",
+    "bytes": 5375816
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-07_session_6.mp3",
+    "bytes": 21906523
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-07_session_5.mp3",
+    "bytes": 36555392
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-09_subcommittee_meeting.mp3",
+    "bytes": 14596655
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-08_session_12.mp3",
+    "bytes": 25736493
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-09_session_15.mp3",
+    "bytes": 15409913
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-07_session_8.mp3",
+    "bytes": 22307346
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-06_session_3.mp3",
+    "bytes": 43562239
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-09_session_13.mp3",
+    "bytes": 28081253
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-07_session_7.mp3",
+    "bytes": 29968146
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives12/2012-05-10_session_17.mp3",
+    "bytes": 29673632
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives08/ICEB_Day_04.mp3",
+    "bytes": 106719242
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives08/ICEB_Day_01.mp3",
+    "bytes": 112445074
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives08/ICEB_Day_05.mp3",
+    "bytes": 66527451
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives08/ICEB_Day_03.mp3",
+    "bytes": 86650619
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives08/ICEB_Day_02.mp3",
+    "bytes": 124237949
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/05d2s5.mp3",
+    "bytes": 82602244
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/09d3s9.mp3",
+    "bytes": 80066969
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/01d1s1.mp3",
+    "bytes": 81488947
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/14d4s14.mp3",
+    "bytes": 87869922
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/04d1s4.mp3",
+    "bytes": 83155964
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/11d3s11.mp3",
+    "bytes": 101712817
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/07d2s7.mp3",
+    "bytes": 111766156
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/02d1s2.mp3",
+    "bytes": 81324173
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/00welcome.mp3",
+    "bytes": 46274022
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/03d1s3.mp3",
+    "bytes": 71596530
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/16d5s15.mp3",
+    "bytes": 86895932
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/13d4s13.mp3",
+    "bytes": 97887964
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/15dinner.mp3",
+    "bytes": 48601766
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/12d4s12.mp3",
+    "bytes": 66259602
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/17d5s16.mp3",
+    "bytes": 72461761
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/10d3s10.mp3",
+    "bytes": 81768806
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/06d2s6.mp3",
+    "bytes": 90066960
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives24/08d2s8.mp3",
+    "bytes": 74077504
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives22/day3.mp3",
+    "bytes": 247375852
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives22/day5.mp3",
+    "bytes": 214280605
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives22/day1.mp3",
+    "bytes": 227520804
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives22/day2.mp3",
+    "bytes": 229278802
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives22/intro.mp3",
+    "bytes": 3583758
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives22/day4.mp3",
+    "bytes": 228158909
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/day3.mp3",
+    "bytes": 237646992
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/coventry.mp3",
+    "bytes": 6143668
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/scni.mp3",
+    "bytes": 5243384
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/day5.mp3",
+    "bytes": 212781155
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/dixon.mp3",
+    "bytes": 5061801
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/day1.mp3",
+    "bytes": 226940382
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/day2.mp3",
+    "bytes": 224356194
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/rundle.mp3",
+    "bytes": 4110296
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/london.mp3",
+    "bytes": 5357069
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/worcester.mp3",
+    "bytes": 6629337
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/hudson.mp3",
+    "bytes": 4998042
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/intro.mp3",
+    "bytes": 1180214
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/liverpool.mp3",
+    "bytes": 6457974
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/wales.mp3",
+    "bytes": 3616687
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/farrell.mp3",
+    "bytes": 12519447
+   },
+   {
+    "path": "iceb/homedir/public_html/recordings/archives20/day4.mp3",
+    "bytes": 216818142
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-09_session_14.mp3",
+    "bytes": 38521472
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-06_session_1.mp3",
+    "bytes": 42043301
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-10_session_18.mp3",
+    "bytes": 10412855
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-08_session_9.mp3",
+    "bytes": 4659934
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-10_session_16.mp3",
+    "bytes": 21771758
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-06_session_2-part2.mp3",
+    "bytes": 33978513
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-08_session_10.mp3",
+    "bytes": 29718729
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-06_session_4.mp3",
+    "bytes": 44639450
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-06_session_2-part1.mp3",
+    "bytes": 5375816
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-07_session_6.mp3",
+    "bytes": 21906523
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-07_session_5.mp3",
+    "bytes": 36555392
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-09_subcommittee_meeting.mp3",
+    "bytes": 14596655
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-08_session_12.mp3",
+    "bytes": 25736493
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-09_session_15.mp3",
+    "bytes": 15409913
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-07_session_8.mp3",
+    "bytes": 22307346
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-06_session_3.mp3",
+    "bytes": 43562239
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-09_session_13.mp3",
+    "bytes": 28081253
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-07_session_7.mp3",
+    "bytes": 29968146
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives12/2012-05-10_session_17.mp3",
+    "bytes": 29673632
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives08/ICEB_Day_04.mp3",
+    "bytes": 106719242
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives08/ICEB_Day_01.mp3",
+    "bytes": 112445074
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives08/ICEB_Day_05.mp3",
+    "bytes": 66527451
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives08/ICEB_Day_03.mp3",
+    "bytes": 86650619
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives08/ICEB_Day_02.mp3",
+    "bytes": 124237949
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives20/coventry.mp3",
+    "bytes": 6143668
+   },
+   {
+    "path": "iceb/homedir/public_html/test/wp-content/uploads/2025/02/recordings/archives20/day1.mp3",
+    "bytes": 226940382
+   }
+  ]
+ }
+}

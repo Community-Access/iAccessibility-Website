@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1780803911781,
+      "tag": "0000_ambiguous_supreme_intelligence",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780804059917,
+      "tag": "0001_damp_iron_lad",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780804254529,
+      "tag": "0002_sharp_dreaming_celestial",
+      "breakpoints": true
+    }
+  ]
+}

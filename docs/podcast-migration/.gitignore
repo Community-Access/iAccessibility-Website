@@ -1,0 +1,4 @@
+# Migration data artifacts (large / regenerable) - keep README + scripts, ignore data
+manifest.json
+staged.json
+*.log
