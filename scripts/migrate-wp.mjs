@@ -92,6 +92,17 @@ async function batchUpsert(table, rows, columns, conflictCol) {
   return done;
 }
 
+// --- author map (WP user ID -> display name) ---
+const users = JSON.parse(readFileSync(`${EXPORT}/wp-users.json`, "utf8"));
+// Note: user IDs are numbers but post_author is a string in this export.
+const authorName = new Map(users.map((u) => [String(u.ID), u.display_name]));
+// Use names only; skip rows where the display name looks like an email/login.
+function cleanAuthor(id) {
+  const name = authorName.get(String(id));
+  if (!name || name.includes("@")) return null;
+  return name;
+}
+
 // --- posts ---
 const posts = JSON.parse(readFileSync(`${EXPORT}/wp-posts.json`, "utf8"));
 const postSlug = makeUniqueSlugger();
@@ -111,6 +122,7 @@ for (const p of posts) {
     excerpt:
       (p.post_excerpt && stripHtml(p.post_excerpt)) ||
       stripHtml(p.post_content).slice(0, 240),
+    author_name: cleanAuthor(p.post_author),
     status,
     published_at: p.post_date || null,
     legacy_wp_post_id: p.ID
@@ -156,7 +168,16 @@ if (DRY) {
 await batchUpsert(
   "blog_posts",
   postRows,
-  ["title", "slug", "body", "excerpt", "status", "published_at", "legacy_wp_post_id"],
+  [
+    "title",
+    "slug",
+    "body",
+    "excerpt",
+    "author_name",
+    "status",
+    "published_at",
+    "legacy_wp_post_id"
+  ],
   "legacy_wp_post_id"
 );
 if (!POSTS_ONLY) {

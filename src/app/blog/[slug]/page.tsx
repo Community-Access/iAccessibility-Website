@@ -17,10 +17,15 @@ export default async function BlogPostPage({
     <article className="wp-container">
       <div className="wp-article">
         <header className="mb-8">
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-3xl font-bold md:text-4xl">{post.title}</h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {post.author ? (
+              <>
+                By {post.author} <span aria-hidden="true">&middot;</span>{" "}
+              </>
+            ) : null}
             <time dateTime={post.date}>{dateLabel(post.date)}</time>
           </p>
-          <h1 className="mt-2 text-3xl font-bold md:text-4xl">{post.title}</h1>
           {post.excerpt ? (
             <p className="mt-4 text-lg text-muted-foreground">{post.excerpt}</p>
           ) : null}

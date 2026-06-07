@@ -33,9 +33,17 @@ export function ContentList({ title, items, emptyLabel }: ContentListProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-                  <CalendarDays className="h-4 w-4" aria-hidden="true" />
-                  <time dateTime={item.date}>{dateLabel(item.date)}</time>
+                <p className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                  {item.author ? (
+                    <>
+                      <span>By {item.author}</span>
+                      <span aria-hidden="true">&middot;</span>
+                    </>
+                  ) : null}
+                  <span className="inline-flex items-center gap-1">
+                    <CalendarDays className="h-4 w-4" aria-hidden="true" />
+                    <time dateTime={item.date}>{dateLabel(item.date)}</time>
+                  </span>
                 </p>
                 {item.excerpt ? <p>{item.excerpt}</p> : null}
               </CardContent>

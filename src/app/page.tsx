@@ -1,3 +1,4 @@
+import { ContentList } from "@/components/layout/content-list";
 import { Sidebar } from "@/components/layout/sidebar";
 import { getDirectoryEntries, getLatestPosts } from "@/lib/content/wordpress";
 
@@ -62,6 +63,8 @@ export default async function HomePage() {
               here to support and empower you on your journey.
             </p>
           </section>
+
+          <ContentList title="Latest from the Report" items={reports.slice(0, 6)} />
         </div>
 
         <Sidebar reports={reports} directory={directory} />

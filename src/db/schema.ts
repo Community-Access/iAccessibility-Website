@@ -51,6 +51,9 @@ export const blogPosts = pgTable(
     slug: text("slug").notNull().unique(),
     body: text("body").notNull(),
     excerpt: text("excerpt"),
+    authorName: text("author_name"),
+    featuredImageUrl: text("featured_image_url"),
+    featuredImageAlt: text("featured_image_alt"),
     status: contentStatus("status").notNull().default("draft"),
     authorId: integer("author_id").references(() => users.id, {
       onDelete: "set null"

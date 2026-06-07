@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { desc } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
@@ -33,8 +34,15 @@ export default async function AdminPostsPage() {
       <section className="wp-article">
         <h1 className="text-3xl font-bold">Posts</h1>
         <p className="mt-3 text-[#595959]">
-          Manage blog posts. The block editor for creating and editing posts is
-          being added next.
+          Manage blog posts and write new ones with the block editor.
+        </p>
+        <p className="mt-4">
+          <Link
+            href="/admin/posts/new"
+            className="inline-flex rounded-md bg-[#0066bf] px-4 py-2 font-semibold text-white no-underline hover:bg-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+          >
+            New post
+          </Link>
         </p>
       </section>
 

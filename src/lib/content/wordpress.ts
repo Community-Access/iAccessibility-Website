@@ -13,6 +13,7 @@ export type ContentSummary = {
   excerpt: string;
   date: string;
   href: string;
+  author?: string | null;
   imageUrl?: string | null;
 };
 
@@ -175,7 +176,8 @@ export async function getLatestPosts(limit = 8): Promise<ContentSummary[]> {
         slug: post.slug,
         excerpt: post.excerpt ?? stripHtml(post.body).slice(0, 240),
         date: post.publishedAt?.toISOString() ?? post.createdAt.toISOString(),
-        href: `/blog/${post.slug}`
+        href: `/blog/${post.slug}`,
+        author: post.authorName
       }));
     }
   }
@@ -201,6 +203,7 @@ export async function getPostBySlug(slug: string): Promise<ContentDetail | null>
         excerpt: row.excerpt ?? stripHtml(row.body).slice(0, 240),
         date: row.publishedAt?.toISOString() ?? row.createdAt.toISOString(),
         href: `/blog/${row.slug}`,
+        author: row.authorName,
         html: row.body.includes("<") ? row.body : paragraphsFromText(row.body)
       };
     }
