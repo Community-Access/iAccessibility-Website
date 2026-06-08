@@ -1254,55 +1254,65 @@ export default function PostEditor({
                   <p className="text-sm font-semibold text-[#222222]">
                     {blockLabel(block)}
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={(event) =>
-                        openBlockMenu(block.id, event.currentTarget)
-                      }
-                      aria-label={`Change type for ${blockPosition}`}
-                      aria-haspopup="listbox"
-                      aria-expanded={openMenuBlockId === block.id}
-                      aria-controls={openMenuBlockId === block.id ? menuId : undefined}
-                      className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
-                    >
-                      Change type
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => insertBlockAfter(block.id)}
-                      aria-label={`Add block after ${blockPosition}`}
-                      className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
-                    >
-                      Add block
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveBlock(block.id, -1)}
-                      disabled={index === 0}
-                      aria-label={`Move ${blockPosition} up`}
-                      className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
-                    >
-                      Move up
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveBlock(block.id, 1)}
-                      disabled={index === blocks.length - 1}
-                      aria-label={`Move ${blockPosition} down`}
-                      className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
-                    >
-                      Move down
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeBlock(block.id)}
-                      aria-label={`Remove ${blockPosition}`}
-                      className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
-                    >
-                      Remove
-                    </button>
-                  </div>
+                  {/* Collapse the 5 per-block controls behind one disclosure so
+                      screen-reader users tab past one control per block, not
+                      five. Closed by default; contents leave the tab order when
+                      collapsed. */}
+                  <details className="group">
+                    <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] [&::-webkit-details-marker]:hidden">
+                      Block actions
+                      <span className="sr-only"> for {blockPosition}</span>
+                    </summary>
+                    <div className="mt-2 flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={(event) =>
+                          openBlockMenu(block.id, event.currentTarget)
+                        }
+                        aria-label={`Change type for ${blockPosition}`}
+                        aria-haspopup="listbox"
+                        aria-expanded={openMenuBlockId === block.id}
+                        aria-controls={openMenuBlockId === block.id ? menuId : undefined}
+                        className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
+                      >
+                        Change type
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertBlockAfter(block.id)}
+                        aria-label={`Add block after ${blockPosition}`}
+                        className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
+                      >
+                        Add block
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveBlock(block.id, -1)}
+                        disabled={index === 0}
+                        aria-label={`Move ${blockPosition} up`}
+                        className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
+                      >
+                        Move up
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveBlock(block.id, 1)}
+                        disabled={index === blocks.length - 1}
+                        aria-label={`Move ${blockPosition} down`}
+                        className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
+                      >
+                        Move down
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeBlock(block.id)}
+                        aria-label={`Remove ${blockPosition}`}
+                        className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </details>
                 </div>
 
                 {block.type === "image" ? (

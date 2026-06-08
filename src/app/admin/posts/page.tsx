@@ -6,6 +6,7 @@ import { blogPosts } from "@/db/schema";
 import { ItemTable, type ItemTableColumn } from "@/components/ui/item-table";
 import { canAdmin, getCurrentAppUser } from "@/lib/auth/server";
 import { dateLabel } from "@/lib/content/wordpress";
+import { PostRowActions } from "./post-row-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -58,6 +59,14 @@ export default async function AdminPostsPage() {
       header: "Date",
       render: (p) =>
         p.publishedAt ? dateLabel(p.publishedAt.toISOString()) : "Not published"
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right",
+      render: (p) => (
+        <PostRowActions id={p.id} title={p.title} status={p.status} />
+      )
     }
   ];
 

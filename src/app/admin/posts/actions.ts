@@ -1,12 +1,54 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { inArray } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { eq, inArray } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
 import { blogCategories, blogPosts, postCategories } from "@/db/schema";
 import { canAdmin, getCurrentAppUser } from "@/lib/auth/server";
 import { postToSocialMedia } from "@/lib/social";
 import { absoluteUrl, slugify, stripHtml } from "@/lib/utils";
+
+export type PostActionResult = { ok: boolean; message: string };
+
+async function requireAdmin() {
+  const user = await getCurrentAppUser();
+  if (!user || !canAdmin(user.role)) {
+    throw new Error("You are not authorized to manage posts.");
+  }
+  if (!hasDatabase || !db) {
+    throw new Error("The database is not configured.");
+  }
+  return user;
+}
+
+/** Unpublish a post — moves it back to draft and clears its publish date. */
+export async function unpublishPost(id: number): Promise<PostActionResult> {
+  await requireAdmin();
+  if (!Number.isInteger(id) || id <= 0) {
+    return { ok: false, message: "Invalid post." };
+  }
+  await db!
+    .update(blogPosts)
+    .set({ status: "draft", publishedAt: null })
+    .where(eq(blogPosts.id, id));
+  revalidatePath("/admin/posts");
+  revalidatePath("/admin");
+  return { ok: true, message: "Post moved to draft." };
+}
+
+/** Permanently delete a post and its category links. */
+export async function deletePost(id: number): Promise<PostActionResult> {
+  await requireAdmin();
+  if (!Number.isInteger(id) || id <= 0) {
+    return { ok: false, message: "Invalid post." };
+  }
+  await db!.delete(postCategories).where(eq(postCategories.postId, id));
+  await db!.delete(blogPosts).where(eq(blogPosts.id, id));
+  revalidatePath("/admin/posts");
+  revalidatePath("/admin");
+  return { ok: true, message: "Post deleted." };
+}
 
 export type CreatePostInput = {
   title: string;

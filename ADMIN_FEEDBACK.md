@@ -83,6 +83,32 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ❓ needs scoping
   batch-1 changes live (WhatsApp removed). "Same bugs" = unfixed editor-behavior
   batch + cached browser tabs (hard-refresh).
 
+## Round 3 shipped (2026-06-07 PM, commit 22c0323)
+- ☑ Editor: autofocus Title on mount (editor is new-post only, no edit mode).
+- ☑ Editor: beforeunload unsaved-content warning (draft safety).
+- ☑ Editor: Title Enter → focus body block (prev commit 7884ffa).
+- ☑ Posts list: order by createdAt so drafts show; "Recent posts" → "All posts".
+- ☑ Dashboard: Users breakdown is now a <dl> (Admins/Moderators/Members).
+- ☑ User menu: added "Submit a blog post" (/report); "Submit an app".
+
+## STILL OPEN — larger features (need careful, isolated implementation)
+Lead has given full guidance for all of these (see chat). Each is a real feature;
+I can't self-verify (admin is auth-gated) so they ship one isolated commit at a
+time to avoid breaking the editor:
+- ☐ Editor: collapse per-block buttons into ONE "Block actions" menu per block
+  (haspopup=menu, position-named) — biggest remaining VO win.
+- ☐ Editor: Cmd/Ctrl+A select-all-blocks (two-step) + Delete-to-clear + UNDO.
+- ☐ Users: client search + pagination; per-row select already named correctly;
+  make each user a link to /admin/users/[id] profile page.
+- ☐ Dashboard: full Start-testing-style quick-action layout (dl breakdown done).
+- ☐ Podcasts admin: new /admin/podcasts read-only ItemTable (paginated, 579 eps).
+- ☐ Posts: Unpublish (status→draft, inline+undo) and Move to trash (status→
+  trashed, restorable) with the focus-managed Modal for trash + post-action
+  announcement.
+- ☐ Submit a podcast: needs a new submit page/flow (no route exists yet).
+- ☐ Media library in admin (LARGE: upload management UI + backend).
+- ☐ Live preview pane in editor (LARGE: render blocks/markdown).
+
 ## Notes
 - Editor = BlockNote (@blocknote/*). Several items (select-all, blank-block on
   Enter, block-options-on-blur, command palette ARIA) are BlockNote behavior/
