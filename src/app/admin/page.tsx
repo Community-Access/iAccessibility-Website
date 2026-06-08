@@ -187,6 +187,31 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
+      {isAdmin ? (
+        <div>
+          <h2 className="mb-4 text-2xl font-semibold">Quick actions</h2>
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {[
+              { href: "/admin/posts/new", label: "Write a new post" },
+              { href: "/admin/posts", label: "Manage posts" },
+              { href: "/admin/podcasts", label: "Browse podcasts" },
+              { href: "/admin/review", label: "Open pending review" },
+              { href: "/admin/users", label: "Manage users" },
+              { href: "/app-directory/submit", label: "Submit an app" }
+            ].map((action) => (
+              <li key={action.href}>
+                <Link
+                  href={action.href}
+                  className="block rounded-lg border border-[#767676] bg-white p-4 font-semibold text-[#0f6cba] no-underline shadow-wordpress hover:border-[#0f6cba] hover:bg-[#eef3f8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {action.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <div className="wp-article">
         <h2 id="dashboard-review-heading" className="text-2xl font-semibold">
           Pending review
