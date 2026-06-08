@@ -479,6 +479,7 @@ export default function PostEditor({
   const [activeBlockTypeIndex, setActiveBlockTypeIndex] = useState(0);
   const [allBlocksSelected, setAllBlocksSelected] = useState(false);
   const clearSnapshotRef = useRef<EditorBlock[] | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
@@ -1282,24 +1283,35 @@ export default function PostEditor({
           <h2 id={bodyHeadingId} className="text-lg font-semibold">
             Post body
           </h2>
-          <button
-            type="button"
-            onClick={openCommandPalette}
-            aria-expanded={commandOpen}
-            aria-keyshortcuts="Meta+K Control+K"
-            className="inline-flex items-center gap-2 rounded-md border border-[#6b6b6b] px-3 py-2 text-sm font-semibold hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
-          >
-            Command palette
-            {/* Spoken name becomes "Command palette, Command K"; the visible
-                ⌘K glyph is hidden from AT so it isn't read awkwardly. */}
-            <span className="sr-only">, Command K</span>
-            <kbd
-              aria-hidden="true"
-              className="rounded border border-[#6b6b6b] bg-slate-100 px-1.5 py-0.5 font-sans text-xs font-medium text-[#595959]"
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowPreview((value) => !value)}
+              aria-expanded={showPreview}
+              aria-controls={`${baseId}-preview`}
+              className="rounded-md border border-[#6b6b6b] px-3 py-2 text-sm font-semibold hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
             >
-              ⌘K
-            </kbd>
-          </button>
+              {showPreview ? "Hide preview" : "Show preview"}
+            </button>
+            <button
+              type="button"
+              onClick={openCommandPalette}
+              aria-expanded={commandOpen}
+              aria-keyshortcuts="Meta+K Control+K"
+              className="inline-flex items-center gap-2 rounded-md border border-[#6b6b6b] px-3 py-2 text-sm font-semibold hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
+            >
+              Command palette
+              {/* Spoken name becomes "Command palette, Command K"; the visible
+                  ⌘K glyph is hidden from AT so it isn't read awkwardly. */}
+              <span className="sr-only">, Command K</span>
+              <kbd
+                aria-hidden="true"
+                className="rounded border border-[#6b6b6b] bg-slate-100 px-1.5 py-0.5 font-sans text-xs font-medium text-[#595959]"
+              >
+                ⌘K
+              </kbd>
+            </button>
+          </div>
         </div>
         <p id={bodyHelpId} className="sr-only">
           Type slash at the start of a block to open block choices. Press Enter
@@ -1587,6 +1599,28 @@ export default function PostEditor({
             );
           })}
         </div>
+
+        {showPreview ? (
+          <section
+            id={`${baseId}-preview`}
+            aria-label="Post preview"
+            className="mt-6 rounded-md border border-[#767676] bg-white p-4"
+          >
+            <h3 className="mb-3 text-sm font-semibold uppercase text-[#595959]">
+              Preview
+            </h3>
+            <article className="wp-prose">
+              {title.trim() ? (
+                <p className="text-3xl font-bold text-[#222222]">{title}</p>
+              ) : null}
+              {/* Author's own content rendered for themselves; uses the same
+                  serializer as publishing so markdown previews accurately. */}
+              <div
+                dangerouslySetInnerHTML={{ __html: blocksToHtml(blocks) }}
+              />
+            </article>
+          </section>
+        ) : null}
       </div>
 
       <div className="wp-article space-y-4">

@@ -194,6 +194,7 @@ export default async function AdminDashboard() {
             {[
               { href: "/admin/posts/new", label: "Write a new post" },
               { href: "/admin/posts", label: "Manage posts" },
+              { href: "/admin/media", label: "Media library" },
               { href: "/admin/podcasts", label: "Browse podcasts" },
               { href: "/admin/review", label: "Open pending review" },
               { href: "/admin/users", label: "Manage users" },

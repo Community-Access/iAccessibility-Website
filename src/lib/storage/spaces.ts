@@ -1,4 +1,8 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  PutObjectCommand,
+  S3Client
+} from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 
 function getSpacesClient() {
@@ -52,4 +56,12 @@ export async function uploadSubmissionFile(file: File, folder: string) {
     bytes: file.size,
     mime: file.type || "application/octet-stream"
   };
+}
+
+export async function deleteSpacesObject(key: string) {
+  const bucket = process.env.DO_SPACES_BUCKET;
+  if (!bucket) throw new Error("DO_SPACES_BUCKET is not configured.");
+  await getSpacesClient().send(
+    new DeleteObjectCommand({ Bucket: bucket, Key: key })
+  );
 }

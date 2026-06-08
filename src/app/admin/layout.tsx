@@ -8,6 +8,7 @@ const ALL_SECTIONS: Array<AdminSection & { adminOnly: boolean }> = [
   { href: "/admin", label: "Dashboard", adminOnly: false },
   { href: "/admin/review", label: "Pending review", adminOnly: false },
   { href: "/admin/posts", label: "Posts", adminOnly: true },
+  { href: "/admin/media", label: "Media", adminOnly: true },
   { href: "/admin/podcasts", label: "Podcasts", adminOnly: true },
   { href: "/admin/users", label: "Users", adminOnly: true }
 ];
