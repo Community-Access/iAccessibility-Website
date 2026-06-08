@@ -71,7 +71,10 @@ export async function ensureDirectoryCommentsTable() {
         DO $$
         BEGIN
           CREATE TYPE comment_status AS ENUM ('visible', 'deleted');
-        EXCEPTION WHEN duplicate_object THEN NULL;
+        -- duplicate_object: type already exists. unique_violation: another
+        -- request created it concurrently (pg_type unique index) — both are safe
+        -- to ignore so this stays idempotent under parallel cold-start requests.
+        EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL;
         END $$;
       `));
       await db!.execute(sql.raw(`
@@ -111,7 +114,10 @@ export async function ensurePostCommentsTable() {
         DO $$
         BEGIN
           CREATE TYPE comment_status AS ENUM ('visible', 'deleted');
-        EXCEPTION WHEN duplicate_object THEN NULL;
+        -- duplicate_object: type already exists. unique_violation: another
+        -- request created it concurrently (pg_type unique index) — both are safe
+        -- to ignore so this stays idempotent under parallel cold-start requests.
+        EXCEPTION WHEN duplicate_object OR unique_violation THEN NULL;
         END $$;
       `));
       await db!.execute(sql.raw(`
