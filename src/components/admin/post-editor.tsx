@@ -477,6 +477,8 @@ export default function PostEditor({
   const [invalidTarget, setInvalidTarget] = useState<InvalidTarget>(null);
   const [openMenuBlockId, setOpenMenuBlockId] = useState<string | null>(null);
   const [activeBlockTypeIndex, setActiveBlockTypeIndex] = useState(0);
+  const [allBlocksSelected, setAllBlocksSelected] = useState(false);
+  const clearSnapshotRef = useRef<EditorBlock[] | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
@@ -836,10 +838,80 @@ export default function PostEditor({
     }
   }
 
+  function clearAllBlocks() {
+    clearSnapshotRef.current = blocks;
+    const fresh = createBlock();
+    setBlocks([fresh]);
+    setAllBlocksSelected(false);
+    setFocusedBlockId(fresh.id);
+    focusBlock(fresh.id, "start");
+    announce(
+      `Cleared ${blocks.length} block${blocks.length === 1 ? "" : "s"}. One empty block remains. Press Control Z to undo.`
+    );
+  }
+
   function onBlockKeyDown(
     event: React.KeyboardEvent<HTMLTextAreaElement>,
     block: EditorBlock
   ) {
+    const mod = event.metaKey || event.ctrlKey;
+
+    // Undo a just-cleared "select all + delete" — only while the editor is
+    // still the single empty block we created (so typed content isn't clobbered).
+    if (
+      mod &&
+      event.key.toLowerCase() === "z" &&
+      clearSnapshotRef.current &&
+      blocks.length === 1 &&
+      !blocks[0].text.trim()
+    ) {
+      event.preventDefault();
+      const snapshot = clearSnapshotRef.current;
+      clearSnapshotRef.current = null;
+      setBlocks(snapshot);
+      setAllBlocksSelected(false);
+      setFocusedBlockId(snapshot[0]?.id ?? null);
+      announce(
+        `Restored ${snapshot.length} block${snapshot.length === 1 ? "" : "s"}.`
+      );
+      return;
+    }
+
+    if (allBlocksSelected) {
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        clearAllBlocks();
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setAllBlocksSelected(false);
+        announce("Selection cleared.");
+        return;
+      }
+      // Any other (non-modifier) key cancels the all-blocks selection and is
+      // then handled normally below.
+      if (!mod) setAllBlocksSelected(false);
+    }
+
+    // Two-step Cmd/Ctrl+A: the first press lets the browser select this field's
+    // text; once the field is already fully selected (or empty), a second press
+    // escalates to selecting ALL blocks (visible outline + announcement).
+    if (mod && event.key.toLowerCase() === "a") {
+      const ta = event.currentTarget;
+      const fullySelected =
+        ta.value.length === 0 ||
+        (ta.selectionStart === 0 && ta.selectionEnd === ta.value.length);
+      if (fullySelected) {
+        event.preventDefault();
+        setAllBlocksSelected(true);
+        announce(
+          `All ${blocks.length} block${blocks.length === 1 ? "" : "s"} selected. Press Delete to clear, or Escape to cancel.`
+        );
+      }
+      return;
+    }
+
     if (event.key === "/" && event.currentTarget.selectionStart === 0) {
       event.preventDefault();
       openBlockMenu(block.id);
@@ -1248,7 +1320,11 @@ export default function PostEditor({
             return (
               <div
                 key={block.id}
-                className="rounded-md border border-[#6b6b6b] bg-white p-3"
+                className={`rounded-md border bg-white p-3 ${
+                  allBlocksSelected
+                    ? "border-[#0066bf] ring-2 ring-[#0066bf]"
+                    : "border-[#6b6b6b]"
+                }`}
               >
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-[#222222]">
