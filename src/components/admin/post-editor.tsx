@@ -543,6 +543,29 @@ export default function PostEditor({
     return () => window.removeEventListener("keydown", onWindowKeyDown);
   }, []);
 
+  // Land focus in the Title on mount — authors expect to start with the title,
+  // not the first body block.
+  useEffect(() => {
+    titleRef.current?.focus();
+  }, []);
+
+  // Warn before leaving (refresh/close/navigate) when there is unsaved content,
+  // so a draft isn't lost. Native prompt; only armed when there's real content.
+  useEffect(() => {
+    const hasContent =
+      title.trim() !== "" ||
+      blocks.some(
+        (block) => (block.text ?? "").trim() !== "" || Boolean(block.url)
+      );
+    if (!hasContent || saving) return;
+    function onBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [title, blocks, saving]);
+
   useEffect(() => {
     return () => {
       if (liveMessageTimerRef.current) {

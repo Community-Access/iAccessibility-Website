@@ -37,8 +37,8 @@ export default async function AdminPostsPage() {
             createdAt: blogPosts.createdAt
           })
           .from(blogPosts)
-          .orderBy(desc(blogPosts.publishedAt))
-          .limit(25)
+          .orderBy(desc(blogPosts.createdAt))
+          .limit(100)
       : [];
 
   const columns: ItemTableColumn<PostRow>[] = [
@@ -80,10 +80,10 @@ export default async function AdminPostsPage() {
 
       <div className="wp-article">
         <h2 id="recent-posts-heading" className="mb-4 text-2xl font-semibold">
-          Recent posts
+          All posts
         </h2>
         <ItemTable
-          caption="Recent posts"
+          caption="All posts"
           headingId="recent-posts-table"
           columns={columns}
           items={recent}

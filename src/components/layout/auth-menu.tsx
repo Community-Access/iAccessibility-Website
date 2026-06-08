@@ -235,7 +235,18 @@ export function AuthMenu() {
               className="flex items-center gap-2 px-3 py-2 text-sm text-foreground no-underline hover:bg-muted focus-visible:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#035a9e]"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
-              Submit App
+              Submit an app
+            </Link>
+
+            <Link
+              href="/report"
+              role="menuitem"
+              tabIndex={-1}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-foreground no-underline hover:bg-muted focus-visible:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#035a9e]"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Submit a blog post
             </Link>
 
             {canAccessAdminRole(appRole) ? (

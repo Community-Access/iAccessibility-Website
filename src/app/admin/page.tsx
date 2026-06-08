@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { count, eq } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
@@ -68,7 +69,7 @@ function DashboardStat({
 }: {
   label: string;
   value: number;
-  detail: string;
+  detail: ReactNode;
   href?: string;
 }) {
   const content = (
@@ -79,7 +80,7 @@ function DashboardStat({
       <span className="mt-3 block text-3xl font-bold text-[#222222]">
         {value.toLocaleString()}
       </span>
-      <span className="mt-1 block text-sm text-[#595959]">{detail}</span>
+      <div className="mt-1 text-sm text-[#595959]">{detail}</div>
     </>
   );
 
@@ -148,7 +149,22 @@ export default async function AdminDashboard() {
           <DashboardStat
             label="Users"
             value={totalUsers}
-            detail={`${adminUsers} ${adminUsers === 1 ? "admin" : "admins"}, ${moderatorUsers} ${moderatorUsers === 1 ? "moderator" : "moderators"}, ${memberUsers} ${memberUsers === 1 ? "member" : "members"}`}
+            detail={
+              <dl className="grid grid-cols-[1fr_auto] gap-x-3">
+                <dt>Admins</dt>
+                <dd className="text-right font-medium text-[#222222]">
+                  {adminUsers}
+                </dd>
+                <dt>Moderators</dt>
+                <dd className="text-right font-medium text-[#222222]">
+                  {moderatorUsers}
+                </dd>
+                <dt>Members</dt>
+                <dd className="text-right font-medium text-[#222222]">
+                  {memberUsers}
+                </dd>
+              </dl>
+            }
             href={isAdmin ? "/admin/users" : undefined}
           />
           <DashboardStat
