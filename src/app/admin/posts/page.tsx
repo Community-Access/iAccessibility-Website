@@ -4,6 +4,7 @@ import { desc } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
 import { blogPosts } from "@/db/schema";
 import { ItemTable, type ItemTableColumn } from "@/components/ui/item-table";
+import { FocusOnRouteChange } from "@/components/ui/focus-on-route-change";
 import { canAdmin, getCurrentAppUser } from "@/lib/auth/server";
 import { dateLabel } from "@/lib/content/wordpress";
 import { PostRowActions } from "./post-row-actions";
@@ -17,16 +18,63 @@ type PostRow = {
   id: number;
   title: string;
   slug: string;
-  status: string;
+  status: "draft" | "pending" | "published";
   publishedAt: Date | null;
   createdAt: Date;
 };
 
-export default async function AdminPostsPage() {
+type StatusFilter = "all" | "published" | "draft" | "pending";
+
+function statusLabel(status: PostRow["status"]) {
+  if (status === "pending") return "Pending review";
+  return status === "published" ? "Published" : "Draft";
+}
+
+function statusFilterLabel(status: StatusFilter) {
+  return status === "all" ? "All" : statusLabel(status);
+}
+
+function FilterLink({
+  href,
+  active,
+  label,
+  count
+}: {
+  href: string;
+  active: boolean;
+  label: string;
+  count: number;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`rounded-md px-3 py-1.5 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+        active
+          ? "bg-[#0066bf] text-white no-underline"
+          : "text-[#0f6cba] underline underline-offset-2 hover:no-underline"
+      }`}
+    >
+      {label} ({count.toLocaleString()})
+    </Link>
+  );
+}
+
+export default async function AdminPostsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const user = await getCurrentAppUser();
   if (!canAdmin(user?.role)) redirect("/admin");
 
-  const recent: PostRow[] =
+  const { status } = await searchParams;
+  const activeFilter: StatusFilter =
+    status === "published" || status === "draft" || status === "pending"
+      ? status
+      : "all";
+
+  const allPosts: PostRow[] =
     hasDatabase && db
       ? await db
           .select({
@@ -39,20 +87,40 @@ export default async function AdminPostsPage() {
           })
           .from(blogPosts)
           .orderBy(desc(blogPosts.createdAt))
-          .limit(100)
+          .limit(500)
       : [];
+  const recent =
+    activeFilter === "all"
+      ? allPosts
+      : allPosts.filter((post) => post.status === activeFilter);
+  const counts = {
+    all: allPosts.length,
+    published: allPosts.filter((post) => post.status === "published").length,
+    draft: allPosts.filter((post) => post.status === "draft").length,
+    pending: allPosts.filter((post) => post.status === "pending").length
+  };
 
   const columns: ItemTableColumn<PostRow>[] = [
     {
       key: "title",
       header: "Title",
       rowHeader: true,
-      render: (p) => <h3 className="text-base font-semibold">{p.title}</h3>
+      render: (p) =>
+        p.status === "published" ? (
+          <Link
+            href={`/blog/${p.slug}`}
+            className="text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {p.title}
+          </Link>
+        ) : (
+          <span className="font-semibold">{p.title}</span>
+        )
     },
     {
       key: "status",
       header: "Status",
-      render: (p) => <span className="capitalize">{p.status}</span>
+      render: (p) => statusLabel(p.status)
     },
     {
       key: "published",
@@ -88,23 +156,61 @@ export default async function AdminPostsPage() {
       </div>
 
       <div className="wp-article">
+        <div className="mb-4 flex flex-wrap gap-2">
+          <FilterLink
+            href="/admin/posts"
+            active={activeFilter === "all"}
+            label="All"
+            count={counts.all}
+          />
+          <FilterLink
+            href="/admin/posts?status=published"
+            active={activeFilter === "published"}
+            label="Published"
+            count={counts.published}
+          />
+          <FilterLink
+            href="/admin/posts?status=draft"
+            active={activeFilter === "draft"}
+            label="Drafts"
+            count={counts.draft}
+          />
+          <FilterLink
+            href="/admin/posts?status=pending"
+            active={activeFilter === "pending"}
+            label="Pending review"
+            count={counts.pending}
+          />
+        </div>
         <h2
           id="recent-posts-heading"
           tabIndex={-1}
           className="mb-4 text-2xl font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          All posts
+          {activeFilter === "all" ? "All posts" : `${statusFilterLabel(activeFilter)} posts`}
         </h2>
+        <FocusOnRouteChange
+          targetId="recent-posts-heading"
+          message={`Showing ${
+            activeFilter === "all"
+              ? "all posts"
+              : `${statusFilterLabel(activeFilter)} posts`
+          }, ${recent.length} item${recent.length === 1 ? "" : "s"}.`}
+        />
         <ItemTable
-          caption="All posts"
+          caption={
+            activeFilter === "all" ? "All posts" : `${statusFilterLabel(activeFilter)} posts`
+          }
           headingId="recent-posts-table"
           columns={columns}
           items={recent}
           getItemKey={(p) => String(p.id)}
-          getItemHref={(p) => `/blog/${p.slug}`}
-          nameColumnKey="title"
           emptyTitle="No posts yet"
-          emptyMessage="Create your first post with the accessible editor."
+          emptyMessage={
+            activeFilter === "all"
+              ? "Create your first post with the accessible editor."
+              : "No posts match this status."
+          }
         />
       </div>
     </div>

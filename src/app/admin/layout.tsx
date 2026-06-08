@@ -7,6 +7,7 @@ import { AdminNav, type AdminSection } from "./admin-nav";
 const ALL_SECTIONS: Array<AdminSection & { adminOnly: boolean }> = [
   { href: "/admin", label: "Dashboard", adminOnly: false },
   { href: "/admin/review", label: "Pending review", adminOnly: false },
+  { href: "/admin/comments", label: "Comments", adminOnly: false },
   { href: "/admin/posts", label: "Posts", adminOnly: true },
   { href: "/admin/media", label: "Media", adminOnly: true },
   { href: "/admin/events", label: "Events", adminOnly: true },

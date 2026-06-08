@@ -642,6 +642,58 @@ export async function getDirectoryEntries(): Promise<DirectoryEntrySummary[]> {
   });
 }
 
+export async function getDirectoryEntryBySlug(
+  slug: string
+): Promise<DirectoryEntrySummary | null> {
+  if (!hasDatabase || !db) return null;
+
+  const row = await db.query.directoryEntries.findFirst({
+    where: eq(directoryEntries.slug, slug)
+  });
+
+  if (!row || row.status !== "approved") return null;
+
+  const links = await db
+    .select({ name: directoryCategories.name })
+    .from(directoryEntryCategories)
+    .innerJoin(
+      directoryCategories,
+      eq(directoryEntryCategories.categoryId, directoryCategories.id)
+    )
+    .where(eq(directoryEntryCategories.entryId, row.id));
+
+  const platforms = new Set<string>();
+  const categories = new Set<string>();
+  const ratings = new Set<string>();
+
+  for (const link of links) {
+    const rating = directoryAccessibilityRatingFromCategory(link.name);
+    if (rating) ratings.add(rating);
+    const { platform, category } = splitDirectoryCategoryName(link.name);
+    if (platform) platforms.add(platform);
+    if (category) categories.add(category);
+  }
+
+  const taxonomyRating = DIRECTORY_ACCESSIBILITY_RATINGS.find((rating) =>
+    ratings.has(rating.value)
+  )?.value;
+
+  return {
+    id: row.id,
+    appName: row.appName,
+    slug: row.slug,
+    description: row.description ?? "",
+    status: row.status,
+    appStoreUrl: row.appStoreUrl,
+    websiteUrl: row.websiteUrl,
+    iconUrl: row.iconUrl,
+    accessibilityRating:
+      directoryAccessibilityRating(row.description) ?? taxonomyRating ?? null,
+    platforms: Array.from(platforms).sort(),
+    categories: Array.from(categories).sort()
+  };
+}
+
 // Distinct platform + category facets present across the approved entries,
 // for building the directory filter controls.
 export function deriveDirectoryFacets(

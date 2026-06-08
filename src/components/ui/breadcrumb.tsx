@@ -13,6 +13,7 @@ import { ChevronRight } from "lucide-react";
 const routeLabels: Record<string, string> = {
   about: "About",
   account: "Account",
+  content: "My Content",
   admin: "Admin",
   "app-directory": "App Directory",
   blog: "Blog",

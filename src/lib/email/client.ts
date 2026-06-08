@@ -1,7 +1,7 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
-import { users } from "@/db/schema";
+import { blogPosts, directoryEntries, users } from "@/db/schema";
 import { absoluteUrl, escapeHtml } from "@/lib/utils";
 
 const FROM_NAME = "iAccessibility";
@@ -362,6 +362,54 @@ Visit iAccessibility: ${absoluteUrl()}`
   };
 }
 
+export function directoryCommentEmail(params: {
+  entryTitle: string;
+  commenterName: string;
+  body: string;
+  commentUrl: string;
+}): EmailContent {
+  const body =
+    paragraph(
+      `${params.commenterName} commented on the app listing "${params.entryTitle}".`
+    ) +
+    detailPanel([["Comment", params.body]]) +
+    button(params.commentUrl, "View the app listing");
+
+  return {
+    subject: `New app directory comment: ${params.entryTitle}`,
+    html: baseEmailTemplate({
+      title: "New app directory comment",
+      preheader: `${params.commenterName} commented on ${params.entryTitle}.`,
+      body
+    }),
+    text: `${params.commenterName} commented on the app listing "${params.entryTitle}".\n\nComment: ${params.body}\n\nView it: ${params.commentUrl}`
+  };
+}
+
+export function postCommentEmail(params: {
+  postTitle: string;
+  commenterName: string;
+  body: string;
+  commentUrl: string;
+}): EmailContent {
+  const body =
+    paragraph(
+      `${params.commenterName} commented on the blog post "${params.postTitle}".`
+    ) +
+    detailPanel([["Comment", params.body]]) +
+    button(params.commentUrl, "View the post");
+
+  return {
+    subject: `New blog comment: ${params.postTitle}`,
+    html: baseEmailTemplate({
+      title: "New blog comment",
+      preheader: `${params.commenterName} commented on ${params.postTitle}.`,
+      body
+    }),
+    text: `${params.commenterName} commented on the blog post "${params.postTitle}".\n\nComment: ${params.body}\n\nView it: ${params.commentUrl}`
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Senders (fire-and-forget friendly; never throw to the caller)
 // ---------------------------------------------------------------------------
@@ -446,4 +494,71 @@ export function sendSubmissionDecision(
   }
 ) {
   return deliver(to, submissionDecisionEmail(params));
+}
+
+export async function notifyDirectoryComment(params: {
+  entryId: number;
+  entryTitle: string;
+  commenterEmail: string;
+  commenterName: string;
+  body: string;
+  commentUrl: string;
+}) {
+  const recipients = new Set(await reviewerEmails());
+
+  if (hasDatabase && db) {
+    try {
+      const [entry] = await db
+        .select({ submittedBy: directoryEntries.submittedBy })
+        .from(directoryEntries)
+        .where(eq(directoryEntries.id, params.entryId))
+        .limit(1);
+
+      if (entry?.submittedBy) {
+        const author = await db.query.users.findFirst({
+          where: eq(users.id, entry.submittedBy)
+        });
+        if (author?.email) recipients.add(author.email);
+      }
+    } catch (error) {
+      console.error("Could not load directory comment recipients:", error);
+    }
+  }
+
+  recipients.delete(params.commenterEmail);
+
+  const content = directoryCommentEmail(params);
+  await Promise.allSettled(Array.from(recipients).map((to) => deliver(to, content)));
+}
+
+export async function notifyPostComment(params: {
+  postSlug: string;
+  postTitle: string;
+  commenterEmail: string;
+  commenterName: string;
+  body: string;
+  commentUrl: string;
+}) {
+  const recipients = new Set(await reviewerEmails());
+
+  if (hasDatabase && db) {
+    try {
+      const post = await db.query.blogPosts.findFirst({
+        where: eq(blogPosts.slug, params.postSlug)
+      });
+      if (post?.authorId) {
+        const author = await db.query.users.findFirst({
+          where: eq(users.id, post.authorId)
+        });
+        if (author?.email) recipients.add(author.email);
+      }
+    } catch (error) {
+      console.error("Could not load blog comment recipients:", error);
+    }
+  }
+
+  recipients.delete(params.commenterEmail);
+
+  const content = postCommentEmail(params);
+  await Promise.allSettled(Array.from(recipients).map((to) => deliver(to, content)));
 }

@@ -465,6 +465,7 @@ export default function PostEditor({
   const categoryId = `${baseId}-category`;
   const errorId = `${baseId}-error`;
   const statusId = `${baseId}-status`;
+  const statusHeadingId = `${baseId}-status-heading`;
   const commandTitleId = `${baseId}-command-title`;
   const commandDialogId = `${baseId}-command-dialog`;
   const commandListId = `${baseId}-command-list`;
@@ -479,6 +480,11 @@ export default function PostEditor({
   const altRef = useRef<HTMLInputElement>(null);
   const commandInputRef = useRef<HTMLInputElement>(null);
   const commandDialogRef = useRef<HTMLDialogElement>(null);
+  const pendingBlockFocusRef = useRef<{
+    blockId: string;
+    cursor: "start" | "end";
+  } | null>(null);
+  const submitStatusRef = useRef<"draft" | "published">("draft");
 
   const [title, setTitle] = useState("");
   const [blocks, setBlocks] = useState<EditorBlock[]>(() => [createBlock()]);
@@ -593,6 +599,14 @@ export default function PostEditor({
     };
   }, []);
 
+  useEffect(() => {
+    const pending = pendingBlockFocusRef.current;
+    if (!pending) return;
+    if (applyBlockFocus(pending.blockId, pending.cursor)) {
+      pendingBlockFocusRef.current = null;
+    }
+  }, [blocks]);
+
   function announce(message: string) {
     if (liveMessageTimerRef.current) {
       window.clearTimeout(liveMessageTimerRef.current);
@@ -604,16 +618,26 @@ export default function PostEditor({
     }, 20);
   }
 
+  function applyBlockFocus(blockId: string, cursor: "start" | "end") {
+    const target = blockRefs.current[blockId];
+    if (!target) return false;
+    target.focus();
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement
+    ) {
+      const position = cursor === "end" ? target.value.length : 0;
+      target.setSelectionRange(position, position);
+    }
+    return true;
+  }
+
   function focusBlock(blockId: string, cursor: "start" | "end" = "start") {
+    setFocusedBlockId(blockId);
+    pendingBlockFocusRef.current = { blockId, cursor };
     window.setTimeout(() => {
-      const target = blockRefs.current[blockId];
-      target?.focus();
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement
-      ) {
-        const position = cursor === "end" ? target.value.length : 0;
-        target.setSelectionRange(position, position);
+      if (applyBlockFocus(blockId, cursor)) {
+        pendingBlockFocusRef.current = null;
       }
     }, 0);
   }
@@ -650,7 +674,7 @@ export default function PostEditor({
     blockId: string,
     field: "content" | "image-url" | "image-alt" | "caption"
   ) {
-    const ids = field === "content" ? [bodyHelpId] : [];
+    const ids: string[] = [];
     if (
       invalidField === "body" &&
       invalidTarget?.blockId === blockId &&
@@ -700,7 +724,7 @@ export default function PostEditor({
       const next = current.filter((block) => block.id !== blockId);
       const focusTarget = next[Math.min(index, next.length - 1)];
       if (focusTarget) focusBlock(focusTarget.id);
-      announce(`Block removed. ${next.length} block${next.length === 1 ? "" : "s"} remaining.`);
+      announce("Block removed.");
       return next;
     });
   }
@@ -862,9 +886,7 @@ export default function PostEditor({
     setAllBlocksSelected(false);
     setFocusedBlockId(fresh.id);
     focusBlock(fresh.id, "start");
-    announce(
-      `Cleared ${blocks.length} block${blocks.length === 1 ? "" : "s"}. One empty block remains. Press Control Z to undo.`
-    );
+    announce("All blocks cleared.");
   }
 
   function selectedClipboardBlocks() {
@@ -919,9 +941,7 @@ export default function PostEditor({
       setBlocks(snapshot);
       setAllBlocksSelected(false);
       setFocusedBlockId(snapshot[0]?.id ?? null);
-      announce(
-        `Restored ${snapshot.length} block${snapshot.length === 1 ? "" : "s"}.`
-      );
+      announce("Blocks restored.");
       return;
     }
 
@@ -934,7 +954,7 @@ export default function PostEditor({
       if (event.key === "Escape") {
         event.preventDefault();
         setSelectedBlockId(null);
-        announce("Block selection cleared.");
+        announce("Selection cleared.");
         return;
       }
       if (!mod) setSelectedBlockId(null);
@@ -964,15 +984,11 @@ export default function PostEditor({
       if (selectedBlockId === block.id) {
         setSelectedBlockId(null);
         setAllBlocksSelected(true);
-        announce(
-          `All ${blocks.length} block${blocks.length === 1 ? "" : "s"} selected. Press Delete to clear, or Escape to cancel.`
-        );
+        announce("All blocks selected.");
       } else {
         setSelectedBlockId(block.id);
         setAllBlocksSelected(false);
-        announce(
-          `${blockLabel(block)} block ${blockIndex + 1} selected. Press Delete to remove it, or press ${event.metaKey ? "Command" : "Control"} A again to select all blocks.`
-        );
+        announce(`Block ${blockIndex + 1} selected.`);
       }
       return;
     }
@@ -998,7 +1014,7 @@ export default function PostEditor({
       if (blocks.length > 1) {
         removeBlock(block.id);
       } else {
-        announce("The empty paragraph block is the only body block.");
+        announce("The only block was cleared.");
       }
       return;
     }
@@ -1234,7 +1250,7 @@ export default function PostEditor({
         featuredImageUrl: featuredUrl || null,
         featuredImageAlt: featuredDecorative ? "" : featuredAlt || null,
         categoryIds: selectedCategoryId ? [Number(selectedCategoryId)] : [],
-        status
+        status: submitStatusRef.current
       });
     } catch (err) {
       if (isRedirect(err)) throw err; // successful redirect from the action
@@ -1248,7 +1264,7 @@ export default function PostEditor({
       <div className="wp-article space-y-5">
         <div>
           <label htmlFor={titleId} className="block text-sm font-semibold">
-            Title (required)
+            Title
           </label>
           <input
             id={titleId}
@@ -1367,7 +1383,7 @@ export default function PostEditor({
       <div className="wp-article">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id={bodyHeadingId} className="text-lg font-semibold">
-            Post body (required)
+            Post body
           </h2>
           <div className="flex flex-wrap gap-2">
             <button
@@ -1635,8 +1651,7 @@ export default function PostEditor({
                       </div>
                     ) : null}
                     <label htmlFor={blockId} className="sr-only">
-                      {blockLabel(block)} content, block {index + 1} of{" "}
-                      {blocks.length}
+                      Block {index + 1}, {blockLabel(block)}
                     </label>
                     <textarea
                       id={blockId}
@@ -1733,6 +1748,15 @@ export default function PostEditor({
             id={categoryId}
             value={selectedCategoryId}
             onChange={(event) => setSelectedCategoryId(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                event.currentTarget.blur();
+                window.setTimeout(() => {
+                  document.getElementById(statusHeadingId)?.focus();
+                }, 0);
+              }
+            }}
             className="mt-1 w-full rounded-md border border-[#6b6b6b] bg-white px-3 py-2 text-[#222222] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
           >
             <option value="">No category selected</option>
@@ -1744,35 +1768,18 @@ export default function PostEditor({
           </select>
         </div>
 
-        <fieldset>
-          <legend className="text-sm font-semibold">Status</legend>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              aria-pressed={status === "draft"}
-              onClick={() => setStatus("draft")}
-              className={`rounded-md border px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2 ${
-                status === "draft"
-                  ? "border-[#0066bf] bg-[#0066bf] text-white"
-                  : "border-[#6b6b6b] bg-white text-[#222222] hover:bg-slate-100"
-              }`}
-            >
-              Save as draft
-            </button>
-            <button
-              type="button"
-              aria-pressed={status === "published"}
-              onClick={() => setStatus("published")}
-              className={`rounded-md border px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2 ${
-                status === "published"
-                  ? "border-[#0066bf] bg-[#0066bf] text-white"
-                  : "border-[#6b6b6b] bg-white text-[#222222] hover:bg-slate-100"
-              }`}
-            >
-              Publish now
-            </button>
-          </div>
-        </fieldset>
+        <div>
+          <h2
+            id={statusHeadingId}
+            tabIndex={-1}
+            className="text-lg font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+          >
+            Status
+          </h2>
+          <p className="mt-1 text-sm text-[#595959]">
+            Save a private draft, or publish when the post is ready to go live.
+          </p>
+        </div>
 
         <p id={statusId} role="status" aria-live="polite" className="sr-only">
           {liveMessage}
@@ -1795,14 +1802,32 @@ export default function PostEditor({
           {error}
         </div>
 
-        <button
-          type="submit"
-          disabled={saving || uploading}
-          aria-describedby={statusId}
-          className="rounded-md bg-[#0066bf] px-5 py-2.5 font-semibold text-white hover:bg-[#035a9e] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
-        >
-          {saving ? "Saving..." : "Save post"}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            disabled={saving || uploading}
+            aria-describedby={statusId}
+            onClick={() => {
+              submitStatusRef.current = "draft";
+              setStatus("draft");
+            }}
+            className="rounded-md border border-[#767676] bg-white px-5 py-2.5 font-semibold text-[#222222] hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+          >
+            {saving && status === "draft" ? "Saving draft..." : "Save draft"}
+          </button>
+          <button
+            type="submit"
+            disabled={saving || uploading}
+            aria-describedby={statusId}
+            onClick={() => {
+              submitStatusRef.current = "published";
+              setStatus("published");
+            }}
+            className="rounded-md bg-[#0066bf] px-5 py-2.5 font-semibold text-white hover:bg-[#035a9e] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+          >
+            {saving && status === "published" ? "Publishing..." : "Publish post"}
+          </button>
+        </div>
       </div>
 
       {commandOpen ? (

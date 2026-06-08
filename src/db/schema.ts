@@ -1,4 +1,5 @@
 import {
+  type AnyPgColumn,
   index,
   integer,
   pgEnum,
@@ -24,6 +25,7 @@ export const directoryStatus = pgEnum("directory_status", [
 
 export const podcastType = pgEnum("podcast_type", ["episodic", "serial"]);
 export const userRole = pgEnum("user_role", ["admin", "moderator", "member"]);
+export const commentStatus = pgEnum("comment_status", ["visible", "deleted"]);
 
 export const users = pgTable(
   "users",
@@ -115,6 +117,37 @@ export const postTags = pgTable(
   })
 );
 
+export const postComments = pgTable(
+  "post_comments",
+  {
+    id: serial("id").primaryKey(),
+    postSlug: text("post_slug").notNull(),
+    // Self-reference enables threaded replies. onDelete cascade so removing a
+    // parent removes its subtree; soft-delete (status) is used instead for
+    // anything that still has visible replies.
+    parentId: integer("parent_id").references(
+      (): AnyPgColumn => postComments.id,
+      { onDelete: "cascade" }
+    ),
+    authorId: integer("author_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
+    authorName: text("author_name"),
+    body: text("body").notNull(),
+    status: commentStatus("status").notNull().default("visible"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow()
+  },
+  (table) => ({
+    postCreatedIdx: index("post_comments_post_created_idx").on(
+      table.postSlug,
+      table.createdAt
+    ),
+    parentIdx: index("post_comments_parent_idx").on(table.parentId),
+    authorIdx: index("post_comments_author_idx").on(table.authorId)
+  })
+);
+
 export const pages = pgTable("pages", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -188,6 +221,36 @@ export const directoryEntryCategories = pgTable(
     categoryIdx: index("directory_entry_categories_category_idx").on(
       table.categoryId
     )
+  })
+);
+
+export const directoryComments = pgTable(
+  "directory_comments",
+  {
+    id: serial("id").primaryKey(),
+    entryId: integer("entry_id")
+      .notNull()
+      .references(() => directoryEntries.id, { onDelete: "cascade" }),
+    parentId: integer("parent_id").references(
+      (): AnyPgColumn => directoryComments.id,
+      { onDelete: "cascade" }
+    ),
+    authorId: integer("author_id").references(() => users.id, {
+      onDelete: "set null"
+    }),
+    authorName: text("author_name"),
+    body: text("body").notNull(),
+    status: commentStatus("status").notNull().default("visible"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow()
+  },
+  (table) => ({
+    entryCreatedIdx: index("directory_comments_entry_created_idx").on(
+      table.entryId,
+      table.createdAt
+    ),
+    parentIdx: index("directory_comments_parent_idx").on(table.parentId),
+    authorIdx: index("directory_comments_author_idx").on(table.authorId)
   })
 );
 

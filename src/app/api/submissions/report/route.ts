@@ -2,13 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db, hasDatabase } from "@/db";
 import { blogPosts } from "@/db/schema";
-import { canModerate, getCurrentAppUser } from "@/lib/auth/server";
+import { getCurrentAppUser } from "@/lib/auth/server";
 import { notifyAdminSubmission, sendSubmissionReceived } from "@/lib/email/client";
-import { postToSocialMedia } from "@/lib/social";
-import { uploadSubmissionFile } from "@/lib/storage/spaces";
 import {
-  absoluteUrl,
-  escapeHtml,
   paragraphsFromText,
   slugify,
   stripHtml
@@ -16,9 +12,7 @@ import {
 
 const schema = z.object({
   title: z.string().optional(),
-  content: z.string().min(1),
-  imageAlt: z.string().optional(),
-  imageDecorative: z.boolean().optional()
+  content: z.string().min(1)
 });
 
 function value(formData: FormData, key: string) {
@@ -46,9 +40,7 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const parsed = schema.safeParse({
     title: value(formData, "title"),
-    content: value(formData, "content"),
-    imageAlt: value(formData, "imageAlt"),
-    imageDecorative: value(formData, "imageDecorative") === "true"
+    content: value(formData, "content")
   });
 
   if (!parsed.success) {
@@ -58,32 +50,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const image = formData.get("image");
-  let imageHtml = "";
-  if (image instanceof File && image.size > 0) {
-    if (!parsed.data.imageDecorative && !parsed.data.imageAlt?.trim()) {
-      return NextResponse.json(
-        {
-          error:
-            "Add an image description, or mark the uploaded image as decorative."
-        },
-        { status: 400 }
-      );
-    }
-    const upload = await uploadSubmissionFile(image, "report-images");
-    imageHtml = `<figure><img src="${escapeHtml(upload.url)}" alt="${escapeHtml(
-      parsed.data.imageDecorative ? "" : (parsed.data.imageAlt ?? "")
-    )}"></figure>`;
-  }
-
   const plainContent = parsed.data.content;
   const title =
     parsed.data.title ||
     stripHtml(plainContent).split(/[.!?]/)[0]?.slice(0, 80) ||
     "Submitted Report";
 
-  // Admins and moderators publish immediately and skip the review queue.
-  const autoPublish = canModerate(user.role);
   const excerpt = stripHtml(plainContent).slice(0, 240);
   const slug = `${slugify(title)}-${Date.now()}`;
 
@@ -92,24 +64,13 @@ export async function POST(request: Request) {
     .values({
       title,
       slug,
-      body: `${imageHtml}${paragraphsFromText(plainContent)}`,
+      body: paragraphsFromText(plainContent),
       excerpt,
-      status: autoPublish ? "published" : "pending",
-      publishedAt: autoPublish ? new Date() : null,
+      status: "pending",
+      publishedAt: null,
       authorId: user.id
     })
     .returning();
-
-  if (autoPublish) {
-    // Live now — announce it on the social accounts (each network no-ops
-    // unless its credentials are configured).
-    void postToSocialMedia({
-      title,
-      url: absoluteUrl(`/blog/${post?.slug ?? slug}`),
-      excerpt
-    });
-    return NextResponse.json({ id: post?.id, status: "published" });
-  }
 
   void notifyAdminSubmission({
     kind: "report",

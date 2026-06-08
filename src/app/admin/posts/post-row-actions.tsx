@@ -20,9 +20,16 @@ export function PostRowActions({
   const deleteTriggerRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
+  function focusPostsHeading() {
+    window.setTimeout(() => {
+      document.getElementById("recent-posts-heading")?.focus();
+    }, 0);
+  }
+
   function handleUnpublish() {
     startTransition(async () => {
       const result = await unpublishPost(id);
+      if (result.ok) focusPostsHeading();
       toast({
         title: result.ok ? "Post unpublished" : "Could not unpublish",
         description: result.ok ? `"${title}" moved to draft.` : result.message,
@@ -35,6 +42,7 @@ export function PostRowActions({
     startTransition(async () => {
       const result = await deletePost(id);
       setConfirmOpen(false);
+      if (result.ok) focusPostsHeading();
       toast({
         title: result.ok ? "Post deleted" : "Could not delete",
         description: result.ok

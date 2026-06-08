@@ -28,6 +28,7 @@ yarn-error.log*
 
 # Editor / OS
 .DS_Store
+.claude/
 .idea
 .vscode/*
 !.vscode/extensions.json

@@ -1,6 +1,7 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
 import { events } from "@/db/schema";
+import { ensureEventsTable } from "@/lib/db-ensure";
 
 export const EVENT_TYPES = [
   "stream",
@@ -93,6 +94,7 @@ export function groupEventsByDate(allEvents: CalendarEvent[]) {
 
 export async function getPublishedEvents() {
   if (!hasDatabase || !db) return [];
+  await ensureEventsTable();
   return db
     .select()
     .from(events)
@@ -102,6 +104,7 @@ export async function getPublishedEvents() {
 
 export async function getAdminEvents() {
   if (!hasDatabase || !db) return [];
+  await ensureEventsTable();
   return db
     .select()
     .from(events)
@@ -110,12 +113,18 @@ export async function getAdminEvents() {
 
 export async function getPublishedEventById(id: number) {
   if (!hasDatabase || !db) return null;
+  await ensureEventsTable();
   const rows = await db
     .select()
     .from(events)
     .where(and(eq(events.id, id), eq(events.status, "published")))
     .limit(1);
   return rows[0] ?? null;
+}
+
+/** Canonical public URL path for an event's detail page. */
+export function eventPath(event: Pick<CalendarEvent, "id">) {
+  return `/events/${event.id}`;
 }
 
 function dateTimeForCalendar(date: string, time: string) {
@@ -180,12 +189,19 @@ function escapeIcs(value: string | null | undefined) {
 }
 
 export function eventIcs(event: CalendarEvent) {
-  const endTime = eventEndTime(event);
   const now = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-  const lines = [
+  return `${[
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//iAccessibility//Events//EN",
+    eventIcsBlock(event, now),
+    "END:VCALENDAR"
+  ].join("\r\n")}\r\n`;
+}
+
+function eventIcsBlock(event: CalendarEvent, now: string) {
+  const endTime = eventEndTime(event);
+  const lines = [
     "BEGIN:VEVENT",
     `UID:iaccessibility-event-${event.id}@iaccessibility.net`,
     `DTSTAMP:${now}`,
@@ -201,8 +217,23 @@ export function eventIcs(event: CalendarEvent) {
       : "",
     event.locationUrl ? `URL:${escapeIcs(event.locationUrl)}` : "",
     "END:VEVENT",
-    "END:VCALENDAR"
   ].filter(Boolean);
+
+  return lines.join("\r\n");
+}
+
+export function eventsIcsFeed(allEvents: CalendarEvent[]) {
+  const now = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//iAccessibility//Events//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "X-WR-CALNAME:iAccessibility Events",
+    ...allEvents.map((event) => eventIcsBlock(event, now)),
+    "END:VCALENDAR"
+  ];
 
   return `${lines.join("\r\n")}\r\n`;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Filter, Search, X } from "lucide-react";
 import { BrandedMediaFrame } from "@/components/layout/branded-media-frame";
@@ -344,7 +345,7 @@ export function DirectoryBrowser({
         ) : (
           <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {visible.map((entry) => {
-              const href = entry.appStoreUrl || entry.websiteUrl || null;
+              const href = `/app-directory/${entry.slug}`;
               return (
                 <li key={`${entry.id}-${entry.slug}`}>
                   <article className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-white shadow-wordpress">
@@ -357,19 +358,12 @@ export function DirectoryBrowser({
                     />
                     <div className="flex flex-1 flex-col p-4">
                       <h3 className="text-lg font-semibold">
-                        {href ? (
-                          <a
-                            href={href}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                            className="text-[#0f6cba] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          >
-                            {entry.appName}
-                            <span className="sr-only"> (opens in a new tab)</span>
-                          </a>
-                        ) : (
-                          entry.appName
-                        )}
+                        <Link
+                          href={href}
+                          className="text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
+                          {entry.appName}
+                        </Link>
                       </h3>
                       {entry.platforms.length > 0 ? (
                         <p className="mt-1 text-xs font-medium uppercase text-[#595959]">
@@ -385,6 +379,30 @@ export function DirectoryBrowser({
                       {entry.description ? (
                         <DescriptionBlock description={entry.description} />
                       ) : null}
+                      <div className="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
+                        {entry.appStoreUrl ? (
+                          <a
+                            href={entry.appStoreUrl}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                            className="text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            App Store
+                            <span className="sr-only"> for {entry.appName} (opens in a new tab)</span>
+                          </a>
+                        ) : null}
+                        {entry.websiteUrl ? (
+                          <a
+                            href={entry.websiteUrl}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                            className="text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            Website
+                            <span className="sr-only"> for {entry.appName} (opens in a new tab)</span>
+                          </a>
+                        ) : null}
+                      </div>
                     </div>
                   </article>
                 </li>

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EventSubscribe } from "@/components/events/event-subscribe";
 import { canAdmin, getCurrentAppUser } from "@/lib/auth/server";
+import { absoluteUrl } from "@/lib/utils";
 import {
   eventDateLabel,
   eventTimeLabel,
@@ -20,6 +22,15 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Events Calendar"
 };
+
+function isToday(date: string) {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(now.getDate()).padStart(2, "0")}`;
+  return date === today;
+}
 
 export default async function EventsPage({
   searchParams
@@ -56,125 +67,147 @@ export default async function EventsPage({
       </section>
 
       <section className="wp-article">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href={`/events?month=${shiftMonth(activeMonth, -1)}`}
-            className="rounded-md border border-[#767676] px-3 py-2 text-sm font-semibold text-[#222222] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            Previous month
-          </Link>
-          <h2 className="text-2xl font-semibold" tabIndex={-1}>
-            {monthLabel(activeMonth)}
-          </h2>
-          <Link
-            href={`/events?month=${shiftMonth(activeMonth, 1)}`}
-            className="rounded-md border border-[#767676] px-3 py-2 text-sm font-semibold text-[#222222] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            Next month
-          </Link>
-        </div>
-
-        {grouped.length === 0 ? (
-          <div className="mt-6 rounded-lg border border-[#767676] bg-white p-8 text-center">
-            <CalendarDays
-              className="mx-auto mb-3 h-10 w-10 text-[#595959]"
-              aria-hidden="true"
-            />
-            <h3 className="text-lg font-semibold text-[#222222]">
-              No events scheduled
-            </h3>
-            <p className="mt-1 text-[#595959]">
-              {isAdmin
-                ? "Check another month or add an event from the admin area."
-                : "Check another month for upcoming events."}
+        <h2 className="text-2xl font-semibold">Calendar</h2>
+        <div className="mt-5 mx-auto max-w-4xl">
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <Link
+              href={`/events?month=${shiftMonth(activeMonth, -1)}`}
+              className="rounded-md border-2 border-[#6b7280] bg-white px-3 py-2 text-sm font-semibold text-[#222222] no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              Previous
+            </Link>
+            <p className="flex-1 text-center text-xl font-extrabold text-[#222222]">
+              {monthLabel(activeMonth)}
             </p>
+            <Link
+              href={`/events?month=${shiftMonth(activeMonth, 1)}`}
+              className="rounded-md border-2 border-[#6b7280] bg-white px-3 py-2 text-sm font-semibold text-[#222222] no-underline hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              Next
+            </Link>
           </div>
-        ) : (
-          <div className="mt-6 space-y-6">
-            {grouped.map(([date, events]) => (
-              <section key={date} className="space-y-3">
-                <h3 className="text-xl font-semibold">
-                  {eventDateLabel(date)}
-                </h3>
-                <ul className="grid gap-4">
-                  {events.map((event) => (
-                    <li key={event.id}>
-                      <article className="rounded-lg border border-[#767676] bg-white p-4 shadow-wordpress">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold uppercase text-[#595959]">
+
+          {grouped.length === 0 ? (
+            <div className="rounded-lg border border-[#767676] bg-white p-8 text-center">
+              <CalendarDays
+                className="mx-auto mb-3 h-10 w-10 text-[#595959]"
+                aria-hidden="true"
+              />
+              <h3 className="text-lg font-semibold text-[#222222]">
+                No events scheduled for {monthLabel(activeMonth)}
+              </h3>
+              <p className="mt-1 text-[#595959]">
+                {isAdmin
+                  ? "Check another month or add an event from the admin area."
+                  : "Check another month for upcoming events."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {grouped.map(([date, events]) => (
+                <div key={date}>
+                  <h3 className="border-b-2 border-[#d4d4d4] pb-3 text-xl font-extrabold text-[#222222]">
+                    {eventDateLabel(date)}
+                    {isToday(date) ? (
+                      <span className="ml-2 rounded bg-[#047857] px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
+                        Today
+                      </span>
+                    ) : null}
+                  </h3>
+                  <ul className="mt-4 space-y-4">
+                    {events.map((event) => (
+                      <li key={event.id}>
+                        <article className="rounded-xl border border-[#d4d4d4] bg-[#f9fafb] p-5 transition-shadow hover:shadow-wordpress">
+                          <h4 className="text-lg font-bold text-[#222222]">
+                            {event.locationUrl ? (
+                              <a
+                                href={event.locationUrl}
+                                rel="noopener noreferrer"
+                                target="_blank"
+                                className="text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              >
+                                {event.title}
+                                <span className="sr-only">
+                                  {" "}
+                                  (opens in a new tab)
+                                </span>
+                              </a>
+                            ) : (
+                              event.title
+                            )}
+                          </h4>
+                          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[#595959]">
+                            <span className="rounded bg-[#4f46e5] px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
                               {eventTypeLabel(event.type)}
+                            </span>
+                            <span>
+                              {eventTimeLabel(event)} {event.timezone}
+                            </span>
+                            {event.location ? <span>{event.location}</span> : null}
+                          </p>
+                          {event.description ? (
+                            <p className="mt-3 text-[#595959]">
+                              {event.description}
                             </p>
-                            <h4 className="mt-1 text-lg font-semibold text-[#222222]">
-                              {event.locationUrl ? (
-                                <a
-                                  href={event.locationUrl}
-                                  rel="noopener noreferrer"
-                                  target="_blank"
-                                  className="text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                >
-                                  {event.title}
-                                  <span className="sr-only">
-                                    {" "}
-                                    (opens in a new tab)
-                                  </span>
-                                </a>
-                              ) : (
-                                event.title
-                              )}
-                            </h4>
+                          ) : null}
+                          <div className="mt-4 flex flex-wrap gap-4 text-sm font-semibold">
+                            <a
+                              href={googleCalendarUrl(event)}
+                              aria-label={`Add ${event.title} to Google Calendar (opens in a new tab)`}
+                              rel="noopener noreferrer"
+                              target="_blank"
+                              className="text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                              Google Calendar
+                              <span className="sr-only">
+                                {" "}
+                                for {event.title} (opens in a new tab)
+                              </span>
+                            </a>
+                            <a
+                              href={outlookCalendarUrl(event)}
+                              aria-label={`Add ${event.title} to Outlook Calendar (opens in a new tab)`}
+                              rel="noopener noreferrer"
+                              target="_blank"
+                              className="text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                              Outlook
+                              <span className="sr-only">
+                                {" "}
+                                for {event.title} (opens in a new tab)
+                              </span>
+                            </a>
+                            <Link
+                              href={`/events/${event.id}/ics`}
+                              aria-label={`Download .ics file for ${event.title}`}
+                              className="text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                              Download .ics
+                              <span className="sr-only"> for {event.title}</span>
+                            </Link>
+                            <Link
+                              href={`/events/${event.id}`}
+                              aria-label={`View details for ${event.title}`}
+                              className="text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                              View details
+                              <span className="sr-only"> for {event.title}</span>
+                            </Link>
                           </div>
-                          <p className="text-sm font-medium text-[#222222]">
-                            {eventTimeLabel(event)} {event.timezone}
-                          </p>
-                        </div>
-                        {event.description ? (
-                          <p className="mt-3 text-[#595959]">
-                            {event.description}
-                          </p>
-                        ) : null}
-                        {event.location && !event.locationUrl ? (
-                          <p className="mt-3 text-sm text-[#595959]">
-                            {event.location}
-                          </p>
-                        ) : null}
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <a
-                            href={googleCalendarUrl(event)}
-                            aria-label={`Add to Google Calendar for ${event.title} (opens in a new tab)`}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                            className="rounded-md border border-[#767676] px-3 py-1.5 text-sm font-semibold text-[#222222] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          >
-                            Add to Google
-                            <span className="sr-only"> (opens in a new tab)</span>
-                          </a>
-                          <a
-                            href={outlookCalendarUrl(event)}
-                            aria-label={`Add to Outlook Calendar for ${event.title} (opens in a new tab)`}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                            className="rounded-md border border-[#767676] px-3 py-1.5 text-sm font-semibold text-[#222222] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          >
-                            Add to Outlook
-                            <span className="sr-only"> (opens in a new tab)</span>
-                          </a>
-                          <a
-                            href={`/events/${event.id}/ics`}
-                            aria-label={`Download .ics file for ${event.title}`}
-                            className="rounded-md border border-[#767676] px-3 py-1.5 text-sm font-semibold text-[#222222] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                          >
-                            Download .ics
-                          </a>
-                        </div>
-                      </article>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        )}
+                        </article>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <EventSubscribe
+            icsUrl={absoluteUrl("/events/calendar.ics")}
+            rssUrl={absoluteUrl("/events/feed.xml")}
+          />
+        </div>
       </section>
     </div>
   );

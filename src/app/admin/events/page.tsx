@@ -9,6 +9,7 @@ import {
   getAdminEvents,
   type CalendarEvent
 } from "@/lib/events";
+import { SOCIAL_NETWORKS, configuredSocialNetworks } from "@/lib/social";
 import { EventActions } from "./event-actions";
 import { EventForm } from "./event-form";
 
@@ -22,6 +23,12 @@ export default async function AdminEventsPage() {
   if (!canAdmin(user?.role)) redirect("/admin");
 
   const items = await getAdminEvents();
+  const connected = configuredSocialNetworks();
+  const shareNetworks = SOCIAL_NETWORKS.map((network) => ({
+    id: network.id,
+    label: network.label,
+    connected: connected.has(network.id)
+  }));
   const columns: ItemTableColumn<CalendarEvent>[] = [
     {
       key: "title",
@@ -109,7 +116,7 @@ export default async function AdminEventsPage() {
 
       <div className="wp-article">
         <h2 className="mb-4 text-2xl font-semibold">Add event</h2>
-        <EventForm />
+        <EventForm shareNetworks={shareNetworks} />
       </div>
 
       <div className="wp-article">

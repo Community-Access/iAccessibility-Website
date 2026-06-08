@@ -19,7 +19,13 @@ function localDateValue() {
   ].join("-");
 }
 
-export function EventForm() {
+export type ShareNetwork = { id: string; label: string; connected: boolean };
+
+export function EventForm({
+  shareNetworks
+}: {
+  shareNetworks: ShareNetwork[];
+}) {
   const formRef = useRef<HTMLFormElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const defaultDate = localDateValue();
@@ -119,6 +125,49 @@ export function EventForm() {
       <FormField id="event-description" label="Description">
         <Textarea id="event-description" name="description" rows={5} />
       </FormField>
+
+      <fieldset className="space-y-3 rounded-lg border border-[#767676] p-4">
+        <legend className="px-1 text-sm font-semibold text-[#222222]">
+          Share to social media
+        </legend>
+        <p id="event-share-hint" className="text-sm text-[#595959]">
+          Optional. Selected networks are posted when a published event is
+          saved.
+        </p>
+        <div className="space-y-2">
+          {shareNetworks.map((network) => (
+            <div key={network.id} className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id={`event-share-${network.id}`}
+                name="networks"
+                value={network.id}
+                disabled={!network.connected}
+                className="mt-1 h-4 w-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+              <label
+                htmlFor={`event-share-${network.id}`}
+                className={network.connected ? "" : "text-[#595959]"}
+              >
+                {network.label}
+                {network.connected ? "" : " — Not connected yet"}
+              </label>
+            </div>
+          ))}
+        </div>
+        <FormField
+          id="event-share-note"
+          label="Custom note"
+          description="Optional. Added above the event link in each post. Up to 280 characters."
+        >
+          <Textarea
+            id="event-share-note"
+            name="shareNote"
+            rows={3}
+            maxLength={280}
+          />
+        </FormField>
+      </fieldset>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={pending}>

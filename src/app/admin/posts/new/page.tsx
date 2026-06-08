@@ -10,6 +10,16 @@ export const metadata = {
   title: "New post"
 };
 
+function isDirectoryOnlyCategory(name: string) {
+  return (
+    /^[1-5]\s+stars?$/i.test(name.trim()) ||
+    /\bApp Directory$/i.test(name) ||
+    /^(iOS|iPadOS|macOS|watchOS|tvOS|visionOS|Windows|Android|Linux)\s*:/i.test(
+      name
+    )
+  );
+}
+
 export default async function NewPostPage() {
   const user = await getCurrentAppUser();
   if (!canAdmin(user?.role)) redirect("/admin");
@@ -21,17 +31,20 @@ export default async function NewPostPage() {
           .from(blogCategories)
           .orderBy(asc(blogCategories.name))
       : [];
+  const postCategories = categories.filter(
+    (category) => !isDirectoryOnlyCategory(category.name)
+  );
 
   return (
     <div className="space-y-6">
       <div className="wp-article">
         <h1 className="text-3xl font-bold">New post</h1>
         <p className="mt-3 text-[#595959]">
-          Write a post with the accessible editor. Publishing immediately makes it
-          live and announces it on the social accounts.
+          Write a post with the accessible editor. Save a draft first, or
+          publish explicitly when it is ready to go live.
         </p>
       </div>
-      <PostEditorLoader categories={categories} />
+      <PostEditorLoader categories={postCategories} />
     </div>
   );
 }

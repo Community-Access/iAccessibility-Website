@@ -16,12 +16,21 @@ Changes in this branch:
   Drizzle push prompted for an unrelated `podcast_shows.itunes_category` vs
   `category` rename, so the events table and indexes were applied with narrow
   SQL on 2026-06-08 to avoid touching podcasts.
+- Runtime hardening added: `src/lib/db-ensure.ts` idempotently creates the
+  custom `events`, `post_comments`, and `directory_comments` tables/enums before
+  event reads/admin actions/comment posts. This is a guard against production
+  Server Component crashes when a fresh deploy references a custom table before
+  the production database has been pushed.
 - WordPress event migration exists at `scripts/migrate-events.mjs`. It parses
   `mc-events` + `_mc_event_data` from `migration/wordpress-export`, skips My
   Calendar demo events by default, and upserts into the custom `events` table.
   Run with `npm run migrate:events`; dry-run with `npm run migrate:events -- --dry`.
   Imported on 2026-06-08: 13 expanded occurrences of `iAccessibility Community
   call` (`wp-32121`) from 2026-05-02 through 2027-05-01.
+- Public `/events` now uses the Community Access-style agenda layout: month
+  navigation, date headings, event cards, and calendar export links. Event action
+  links have event-specific accessible names; the all-events feed is
+  `/events/calendar.ics`.
 - App Directory ratings are filters only, not user-facing categories. Rating
   values still preserve the migrated taxonomy values internally, but form/filter
   labels read as "Fully Accessible", "Mostly Accessible", etc. without the
@@ -32,6 +41,30 @@ Changes in this branch:
   moderators publish directly instead of entering the review queue.
 - Directory cards now expose long descriptions through an expandable full
   description block instead of leaving cards feeling cut off.
+- App Directory entries now have canonical detail pages under
+  `/app-directory/[slug]`. Logged-in members can comment on approved apps; the
+  app submitter/author and reviewer list are notified by email, reusing the
+  existing review notification infrastructure.
+- Blog posts now have logged-in comment forms and approved comment lists on
+  `/blog/[slug]`; post authors and reviewers are notified by email.
+- Added `/account/content` and linked it from the user menu. It shows the signed
+  in user's blog submissions and app directory submissions in Start-testing-style
+  tables with status, published links when available, and comment counts.
+- The public Report submission form is now a simplified block editor: title
+  first, paragraph blocks, Enter creates/focuses the next block, Backspace
+  removes empty blocks, and Cmd/Ctrl+A selects current block then all blocks.
+  It always submits as `pending` review, even for admins/moderators; buttons and
+  copy say "Submit for review" instead of implying publication.
+- Admin post editor follow-up fixes: Title label no longer repeats "required";
+  block announcements are shorter; Enter-created paragraph blocks receive focus;
+  Backspace removes empty paragraph blocks; Cmd/Ctrl+A announces one-block vs
+  all-block selection; Escape blurs the category select; directory-only
+  categories such as rating/platform terms are filtered out; Status is a heading
+  instead of a fieldset/group; actions are explicit `Save draft` and
+  `Publish post`.
+- Admin posts list now has WordPress-like status filters for All, Published,
+  Drafts, and Pending Review. Trash remains a known gap because it still needs a
+  soft-delete schema change.
 - Admin media library now uses the shared `ItemTable` style with search, media
   type filters (image/video/audio/other), inline alt text editing, open/copy,
   and delete confirmation.
@@ -696,3 +729,60 @@ NOTES:
 - Real full-text blog search; colleagues' forgot-password notes (specifics needed).
 - Non-site tasks: add Lauren as GitHub collaborator (need handle); fork into a separate
   blog-post-submission app (Beyond-The-Gallery-based).
+
+---
+
+## Event broadcast + threaded blog comments (this pass)
+
+Spec: `docs/superpowers/specs/2026-06-08-event-broadcast-and-blog-comments-design.md`.
+Built on top of a prior session's work (flat comments, iCal feed, directory comments,
+runtime `db-ensure` table creation); reconciled to the approved spec. Decisions confirmed
+with the user: add threading, consolidate calendars to `/events`, extend "My Content".
+
+DELIVERED:
+- BLOG COMMENTS now THREADED. `post_comments` gained `parent_id` (schema + `db-ensure`
+  ALTER ... ADD COLUMN IF NOT EXISTS). `src/lib/post-comments.ts` builds a reply tree and
+  prunes deleted leaves (deleted nodes with surviving replies render "Comment removed").
+  `src/components/blog/post-comments.tsx` rewritten: recursive nodes, heading cap at h4
+  (h3 top / h4 replies; deeper depth via nested `<ul>`), inline reply disclosure with focus
+  in/out + Escape-to-cancel, one polite live region (clear-then-set), focus moves to the
+  new/affected comment after post/delete, deep-link `#comment-{id}` focus on mount,
+  owner/moderator inline soft-delete.
+- COMMENT API (`/api/post-comments`): POST accepts `parentId` (validates parent is visible +
+  same post); added DELETE (owner or moderator, soft-delete). `notifyPostComment` dedup was
+  already correct (reviewers ∪ author − commenter).
+- ADMIN MODERATION: new `/admin/comments` (ItemTable + Modal-confirm delete via
+  `CommentRowActions`); added "Comments" to admin nav (`adminOnly: false` so moderators see it).
+- MY CONTENT (`/account/content`): new "Needs reply" column; counts others' comments minus the
+  author's replies per post, deep-links to the post's comments.
+- EVENT SOCIAL SHARE (Feature A): `src/lib/social/index.ts` adds `configuredSocialNetworks`,
+  `composeEventStatus`, `postEventToSocial` (per-network, best-effort, returns per-network
+  results). Event form has a "Share to social media" fieldset (per-network checkboxes; disabled
+  + "Not connected yet" in the visible label) + custom-note textarea. `createEvent` posts only
+  published events to selected networks and folds results into the success message.
+  Facebook needs `FACEBOOK_PAGE_ID` + `FACEBOOK_PAGE_ACCESS_TOKEN` in the deploy env.
+- EVENTS RSS (Feature B): new `/events/feed.xml`.
+- EVENT DETAIL PAGE: new `/events/[id]` (canonical landing for social posts + RSS; dl for
+  When/Where, add-to-calendar links, subscribe link).
+- SUBSCRIBE: `/events` now shows webcal:// (Apple Calendar), Events RSS, and copy-feed-URL
+  (`src/components/events/event-subscribe.tsx`), plus per-event "View details" links.
+- `/my-calendar` already redirects to `/events` (consolidated).
+
+ACCESSIBILITY (accessibility-lead pre- and post-implementation review):
+- Two majors found and fixed: reply-form wrapper now always renders so the Reply button's
+  `aria-controls` IDREF stays valid when collapsed; `event-subscribe` copy confirmation uses the
+  ref-based clear-then-set live-region pattern (dropped the zero-width-space hack).
+- Verified `Modal` focus-restore guards with `document.contains` and falls back to
+  `fallbackFocusSelector` (`#comments-table-top`) when a deleted row's trigger detaches.
+- Remaining notes are minor/polish (see review): redundant `aria-live` alongside `role="status"`.
+
+VERIFICATION: `npm run typecheck`, `npm run build`, and `eslint` on changed files all pass.
+(`next lint` is broken in this Next version — pre-existing, unrelated; ran eslint directly.)
+
+PENDING / FOLLOW-UPS:
+- No automated test harness in the repo (no `test` script); pure logic like `buildPostCommentTree`,
+  the notify dedup, and `composeEventStatus` are untested by unit tests — worth adding vitest later.
+- "Needs reply" count is a per-post heuristic (others' comments minus author replies), not a true
+  per-thread unanswered check.
+- `db-ensure` runtime table creation is used instead of versioned Drizzle migrations (matches the
+  prior session's approach); schema.ts and the live DB can drift.

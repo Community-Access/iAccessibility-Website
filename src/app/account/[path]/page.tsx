@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentAppUser } from "@/lib/auth/server";
 
 export default async function AccountPage() {
@@ -24,6 +25,14 @@ export default async function AccountPage() {
             <dd className="capitalize">{user.role}</dd>
           </div>
         </dl>
+        <p className="mt-6">
+          <Link
+            href="/account/content"
+            className="font-semibold text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            View my content
+          </Link>
+        </p>
       </article>
     </div>
   );

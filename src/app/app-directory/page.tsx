@@ -19,7 +19,7 @@ export default async function AppDirectoryPage() {
 
   return (
     <div className="wp-container space-y-10">
-      <section className="wp-article text-center">
+      <div className="wp-article text-center">
         <h1 className="text-3xl font-bold">App Directory</h1>
         <p className="mx-auto mt-4 max-w-3xl text-lg">
           Find accessibility information for apps across popular platforms.
@@ -30,12 +30,9 @@ export default async function AppDirectoryPage() {
             <Link href="/app-directory/submit">Submit an app</Link>
           </Button>
         </div>
-      </section>
+      </div>
 
       <div className="wp-article">
-        <h2 id="directory-browse-heading" className="sr-only">
-          Browse apps
-        </h2>
         {entries.length === 0 ? (
           <p className="text-foreground">
             No approved entries are in the directory yet. Once apps are approved

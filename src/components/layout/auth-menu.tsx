@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LogOut, Plus, Shield, User } from "lucide-react";
+import { ChevronDown, FileText, LogOut, Plus, Shield, User } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authClient } from "@/lib/auth/client";
 
@@ -228,6 +228,17 @@ export function AuthMenu() {
             </Link>
 
             <Link
+              href="/account/content"
+              role="menuitem"
+              tabIndex={-1}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-foreground no-underline hover:bg-muted focus-visible:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#035a9e]"
+            >
+              <FileText className="h-4 w-4" aria-hidden="true" />
+              My Content
+            </Link>
+
+            <Link
               href="/app-directory/submit"
               role="menuitem"
               tabIndex={-1}
@@ -337,6 +348,12 @@ export function MobileAuthActions() {
         className="rounded-md border border-white/50 px-3 py-2 text-center text-sm font-semibold text-white"
       >
         My Profile
+      </Link>
+      <Link
+        href="/account/content"
+        className="rounded-md border border-white/50 px-3 py-2 text-center text-sm font-semibold text-white"
+      >
+        My Content
       </Link>
       <Link
         href="/app-directory/submit"

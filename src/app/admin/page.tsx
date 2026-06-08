@@ -22,6 +22,7 @@ import {
   users
 } from "@/db/schema";
 import { canAdmin, getCurrentAppUser } from "@/lib/auth/server";
+import { ensureEventsTable } from "@/lib/db-ensure";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -46,8 +47,16 @@ async function countAll(
     | typeof events
 ) {
   if (!hasDatabase || !db) return 0;
-  const [row] = await db.select({ value: count() }).from(table);
-  return row?.value ?? 0;
+  try {
+    if (table === events) {
+      await ensureEventsTable();
+    }
+    const [row] = await db.select({ value: count() }).from(table);
+    return row?.value ?? 0;
+  } catch (error) {
+    console.error("Admin dashboard count failed:", error);
+    return 0;
+  }
 }
 
 async function userRoleCount(role: "admin" | "moderator" | "member") {
