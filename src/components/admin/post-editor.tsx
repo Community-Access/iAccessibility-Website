@@ -270,6 +270,28 @@ function blocksToHtml(blocks: EditorBlock[]) {
     .join("\n");
 }
 
+function blocksToPlainText(blocks: EditorBlock[]) {
+  return blocks
+    .map((block) => {
+      if (block.type === "image") {
+        return [
+          block.url?.trim() ? `Image URL: ${block.url.trim()}` : "",
+          block.decorative
+            ? "Image is decorative."
+            : block.alt?.trim()
+              ? `Image description: ${block.alt.trim()}`
+              : "",
+          block.text.trim()
+        ]
+          .filter(Boolean)
+          .join("\n");
+      }
+      return block.text.trim();
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 function blocksFromMarkdown(value: string) {
   const lines = value.replace(/\r\n/g, "\n").split("\n");
   const parsed: EditorBlock[] = [];
@@ -843,6 +865,36 @@ export default function PostEditor({
     announce(
       `Cleared ${blocks.length} block${blocks.length === 1 ? "" : "s"}. One empty block remains. Press Control Z to undo.`
     );
+  }
+
+  function selectedClipboardBlocks() {
+    if (allBlocksSelected) return blocks;
+    if (selectedBlockId) {
+      return blocks.filter((block) => block.id === selectedBlockId);
+    }
+    return [];
+  }
+
+  function onBlockCopy(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const selected = selectedClipboardBlocks();
+    if (selected.length === 0) return;
+    event.preventDefault();
+    event.clipboardData.setData("text/plain", blocksToPlainText(selected));
+    event.clipboardData.setData("text/html", blocksToHtml(selected));
+    announce(
+      `${selected.length} block${selected.length === 1 ? "" : "s"} copied.`
+    );
+  }
+
+  function onBlockCut(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const selected = selectedClipboardBlocks();
+    if (selected.length === 0) return;
+    onBlockCopy(event);
+    if (allBlocksSelected) {
+      clearAllBlocks();
+      return;
+    }
+    if (selectedBlockId) removeBlock(selectedBlockId);
   }
 
   function onBlockKeyDown(
@@ -1595,6 +1647,8 @@ export default function PostEditor({
                       onFocus={() => setFocusedBlockId(block.id)}
                       onChange={(e) => updateBlock(block.id, { text: e.target.value })}
                       onKeyDown={(e) => onBlockKeyDown(e, block)}
+                      onCopy={onBlockCopy}
+                      onCut={onBlockCut}
                       onPaste={(e) => onBlockPaste(e, block)}
                       rows={block.type === "heading" ? 2 : 5}
                       aria-invalid={

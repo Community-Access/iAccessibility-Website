@@ -1,22 +1,24 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 export function RouteChangeAnnouncer() {
   const pathname = usePathname();
-  const previousPathname = useRef(pathname);
+  const searchParams = useSearchParams();
+  const locationKey = `${pathname}?${searchParams.toString()}`;
+  const previousLocationKey = useRef(locationKey);
 
   useEffect(() => {
-    if (previousPathname.current === pathname) return;
+    if (previousLocationKey.current === locationKey) return;
 
-    previousPathname.current = pathname;
+    previousLocationKey.current = locationKey;
 
     window.requestAnimationFrame(() => {
       const main = document.getElementById("content");
       main?.focus({ preventScroll: true });
     });
-  }, [pathname]);
+  }, [locationKey]);
 
   return null;
 }

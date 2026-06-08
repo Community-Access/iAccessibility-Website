@@ -6,6 +6,9 @@ import { ReportSubmissionForm } from "@/components/forms/report-submission-form"
 import { getPostsPage } from "@/lib/content/wordpress";
 
 export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "iAccessibility Report"
+};
 
 export default async function ReportPage({
   searchParams
@@ -33,6 +36,8 @@ export default async function ReportPage({
         </div>
       </section>
 
+      <ReportSubmissionForm />
+
       <section className="wp-article">
         <ContentList title="Latest Posts" items={posts} />
         <Pagination
@@ -41,8 +46,6 @@ export default async function ReportPage({
           hrefFor={(p) => `/report?page=${p}#latest-posts-heading`}
         />
       </section>
-
-      <ReportSubmissionForm />
     </div>
   );
 }

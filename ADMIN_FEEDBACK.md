@@ -8,8 +8,8 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ❓ needs scoping
 
 ## Posts list (/admin/posts)
 - ☑ GOOD: skip-to-bottom, table, clickable post titles. (keep)
-- ☐ Add "Move to Trash" / delete + unpublish a post (WordPress-style). Needs a
-  trash/restore concept or hard delete + an unpublish (back to draft) action.
+- ☑ Added hard Delete + Unpublish (back to draft). Restorable soft trash is
+  deferred because it needs a schema change.
 
 ## Block editor (/admin/posts/new)
 - ☐ Initial focus lands in a paragraph block — should land in the TITLE field.
@@ -63,11 +63,9 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ❓ needs scoping
   (edit episodes; future: podcast network, RSS feed management).
 
 ## User menu / submissions (added 2026-06-07 PM)
-- ☐ User menu only has "Submit App". Add ways to submit BLOG POSTS and PODCASTS
-  too, so everything is submittable from the menu. NEEDS ROUTES: apps =
-  /app-directory/submit (exists); blog post ≈ /report (ReportSubmissionForm,
-  exists) — confirm wording/intent; podcast = NO route yet (audio-submission-form
-  exists but is not wired to a page) → needs a submit-a-podcast page/flow.
+- ☑ Desktop and mobile user menus include Submit App, Submit Blog Post
+  (`/report#submit-report`), and Submit Podcast (`/iacast-network`). Dedicated
+  audio submit/review flow is still a future route.
 
 ## Round 2 status (2026-06-07 PM)
 - ☑ Content management copy reworded to "Write, edit, and publish blog posts."
@@ -118,8 +116,83 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ❓ needs scoping
 - Block "Change type" is still its own listbox inside the disclosure; a single
   unified per-block menu (lead's preferred end-state) is a future refinement.
 
+## Round 4 — VoiceOver test pass (2026-06-07, App Directory + admin + search + events + users)
+
+### CRITICAL (Taylor: "must be fixed immediately")
+- ☑ **Duplicate submissions / no success feedback.** Submitting an app created
+  it but showed NO confirmation, so it was submitted ~5 times (5 directory rows).
+  ROOT CAUSE FOUND: `directory-submission-form.tsx` onSubmit calls
+  `event.currentTarget.reset()` AFTER `await fetch(...)`; React nulls
+  `event.currentTarget` after the await → `.reset()` throws → the success
+  `setStatus(...)` (line 168) never runs and the form never clears. Fix: capture
+  `const form = event.currentTarget` before the await. Done in this branch; the
+  form resets and reports published/review status.
+- ☐ **Server rendering error in admin.** Taylor hit "there was an error in the
+  server rendering components" around the review area. NEEDS REPRO — likely the
+  review page or a directory-entry detail render with a null field. Investigate.
+- ☑ **Platform misdetected as Android for an App Store app.** App Store autofill
+  now forces `iOS/iPadOS`, uses an exact base-category match, and the submission
+  API links `iOS: <category>` rather than accidentally selecting Android terms.
+
+### App Directory submit form
+- ☑ After picking an app from "App Store Results", the results list dismisses
+  and focus moves to App Version.
+- ☑ Rating labels now read "Fully Accessible", "Mostly Accessible", "Average",
+  "Needs Work", and "Not Accessible" while preserving migrated rating values
+  internally.
+- ☑ App Description helper text removed.
+- ☑ Nutrition-labels empty state removed.
+- ☑ Free/Paid includes "Free with in-app purchases".
+- ☑ Admins/moderators publish directly; regular members submit for review.
+- ☐ Price field UX: confirm it reads cleanly (Taylor flagged "price… five hyphen"
+  but that was the rating select; verify price input announces well).
+
+### App Directory display
+- ☑ Long card descriptions now include an expandable full-description section so
+  the card is scannable without losing the full text.
+
+### Admin review queue
+- ☐ Copy: "Pending Report Posts" / "No pending report posts" → "blog posts".
+- ☐ Unify into ONE review queue (posts + directory together) for simplicity.
+- ☐ Approve/Reject MODALS (model on Beyond the Gallery): Reject opens a modal
+  asking why (with rules); Approve allows optional comments. [DECISION]
+- ☑ GOOD: approve/reject buttons + focus management work well (keep).
+
+### Search
+- ☐ Group results under headings by type (blog posts, podcasts, …) instead of one
+  flat grid; say "results" + categorized headings.
+- ☐ Consider removing excerpts from the search result grid (Taylor unsure).
+- ☑ GOOD: search works.
+
+### Events
+- ☑ Added real events data flow: `events` schema, admin add/manage screen,
+  canonical `/events` public month view, Google/Outlook/ICS calendar links, and
+  WordPress `mc-events` migration into the custom table. `/my-calendar` is only a
+  compatibility redirect now.
+
+### Users (/admin/users)
+- ☐ Add user management actions: change password, delete user, "more actions".
+- ☐ Add a filter like Start-testing's users list.
+- ☑ Mirrored the users-tab admin/moderator/member breakdown onto the dashboard.
+- ☑ GOOD: per-user profile link + focus return to "All users" works well (keep).
+
+### Editor
+- ☑ GOOD: "New post" lands in title→paragraph content as expected (keep).
+
 ## Notes
-- Editor = BlockNote (@blocknote/*). Several items (select-all, blank-block on
-  Enter, block-options-on-blur, command palette ARIA) are BlockNote behavior/
-  config + custom wrappers in src/components/admin/post-editor.tsx.
+- Editor = custom hand-rolled block editor in
+  `src/components/admin/post-editor.tsx`, not BlockNote.
 - All UI changes go through accessibility-lead review per project policy.
+
+## Round 5 shipped in branch (2026-06-08)
+- ☑ Admin Events section added to nav and dashboard quick actions.
+- ☑ Admin Media Library rebuilt as an `ItemTable` with search and media-type
+  filters.
+- ☑ Admin section nav removed redundant `aria-label`; current page still uses
+  `aria-current`.
+- ☑ `/plus` replaced with Community Resources; old join/Discord WordPress copy
+  removed.
+- ☑ Report page form now appears before latest posts, and menu links point to
+  `/report#submit-report`.
+- ☑ Rating categories are treated as filter-only facets and are not offered as
+  submission categories.

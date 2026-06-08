@@ -7,15 +7,13 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DIRECTORY_CATEGORIES, DIRECTORY_PLATFORMS } from "@/lib/content/wordpress";
-
-const RATINGS = [
-  "5 - Fully Accessible",
-  "4 - Mostly Accessible",
-  "3 - Average",
-  "2 - Needs Work",
-  "1 - Not Accessible"
-];
+import {
+  DIRECTORY_ACCESSIBILITY_RATINGS,
+  DIRECTORY_CATEGORIES,
+  DIRECTORY_PLATFORMS,
+  directoryAccessibilityRatingLabel,
+  directorySubmissionCategoryNames
+} from "@/lib/content/wordpress";
 
 type AppStoreResult = {
   itunesAppId: string;
@@ -27,7 +25,7 @@ type AppStoreResult = {
   iconUrl: string;
   appStoreUrl: string;
   websiteUrl: string;
-  paidStatus: "Free" | "Paid";
+  paidStatus: "Free" | "Free with in-app purchases" | "Paid";
   price: string;
   bundleId: string;
   contentRating: string;
@@ -38,6 +36,12 @@ type AppStoreResult = {
 
 type DirectorySubmissionFormProps = {
   categories?: string[];
+  publishesImmediately?: boolean;
+};
+
+type SubmissionStatus = {
+  tone: "idle" | "success" | "error";
+  message: string;
 };
 
 type FormElement = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
@@ -60,23 +64,21 @@ function categoryValue(appStoreCategory: string, categories: string[]) {
   if (!normalized) return "";
 
   return (
-    categories.find((category) => normalizeCategoryName(category) === normalized) ||
-    categories.find((category) =>
-      normalizeCategoryName(category).endsWith(`: ${normalized}`)
-    ) ||
-    categories.find((category) =>
-      normalizeCategoryName(category).includes(normalized)
-    ) ||
-    ""
+    categories.find((category) => normalizeCategoryName(category) === normalized) || ""
   );
 }
 
 export function DirectorySubmissionForm({
-  categories = DIRECTORY_CATEGORIES
+  categories = directorySubmissionCategoryNames(DIRECTORY_CATEGORIES),
+  publishesImmediately = false
 }: DirectorySubmissionFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
+  const appVersionRef = useRef<HTMLInputElement>(null);
   const [appName, setAppName] = useState("");
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState<SubmissionStatus>({
+    tone: "idle",
+    message: ""
+  });
   const [lookupStatus, setLookupStatus] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -143,36 +145,50 @@ export function DirectorySubmissionForm({
       "accessibilityNutritionLabels",
       app.accessibilityNutritionLabels.join(", ")
     );
+    setResults([]);
     setLookupStatus(`${app.appName} details were added to the form.`);
+    window.setTimeout(() => appVersionRef.current?.focus(), 0);
   }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
     setLoading(true);
-    setStatus("");
+    setStatus({ tone: "idle", message: "" });
 
     const response = await fetch("/api/submissions/directory", {
       method: "POST",
-      body: new FormData(event.currentTarget)
+      body: new FormData(form)
     });
     const payload = await response.json().catch(() => ({}));
 
     setLoading(false);
 
     if (response.ok) {
-      event.currentTarget.reset();
+      form.reset();
       setAppName("");
       setResults([]);
       setSelected(null);
       setLookupStatus("");
-      setStatus("Your app submission was sent to the review queue.");
+      setStatus(
+        {
+          tone: "success",
+          message: publishesImmediately
+            ? "The app was published to the directory."
+            : "Your app submission was sent to the review queue."
+        }
+      );
     } else {
-      setStatus(payload.error || "The app submission could not be saved.");
+      setStatus({
+        tone: "error",
+        message: payload.error || "The app submission could not be saved."
+      });
     }
   }
 
   return (
     <form ref={formRef} className="space-y-5" onSubmit={onSubmit}>
+      <p className="text-sm text-[#595959]">Fields marked with * are required.</p>
       <input type="hidden" name="itunesAppId" />
       <input type="hidden" name="iconUrl" />
       <input type="hidden" name="accessibilityNutritionLabels" />
@@ -259,11 +275,8 @@ export function DirectorySubmissionForm({
           </section>
         ) : null}
 
-        {selected ? (
-          <section
-            className="mt-4 rounded-md border border-border bg-white p-3"
-            aria-labelledby="nutrition-labels-heading"
-          >
+        {selected?.accessibilityNutritionLabels.length ? (
+          <div className="mt-4 rounded-md border border-border bg-white p-3">
             <h2
               id="nutrition-labels-heading"
               className="flex items-center gap-2 text-lg font-semibold"
@@ -271,29 +284,28 @@ export function DirectorySubmissionForm({
               <CheckCircle2 className="h-5 w-5 text-[#035a9e]" aria-hidden="true" />
               Accessibility Nutrition Labels
             </h2>
-            {selected.accessibilityNutritionLabels.length > 0 ? (
-              <ul className="mt-2 flex flex-wrap gap-2">
-                {selected.accessibilityNutritionLabels.map((label) => (
-                  <li
-                    key={label}
-                    className="rounded-full bg-[#eef3f8] px-3 py-1 text-sm"
-                  >
-                    {label}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-2 text-sm text-[#595959]">
-                Apple did not return public accessibility labels for this app.
-                Complete the review fields below from your own testing.
-              </p>
-            )}
-          </section>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {selected.accessibilityNutritionLabels.map((label) => (
+                <li
+                  key={label}
+                  className="rounded-full bg-[#eef3f8] px-3 py-1 text-sm"
+                >
+                  {label}
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
       </div>
 
       <FormField id="app-version" label="App Version" required>
-        <Input id="app-version" name="appVersion" required autoComplete="off" />
+        <Input
+          id="app-version"
+          ref={appVersionRef}
+          name="appVersion"
+          required
+          autoComplete="off"
+        />
       </FormField>
 
       <div className="grid gap-5 md:grid-cols-2">
@@ -326,7 +338,6 @@ export function DirectorySubmissionForm({
       <FormField
         id="app-description"
         label="App Description"
-        description="Autofill can add the App Store description; edit it if needed."
         required
       >
         <Textarea id="app-description" name="description" required maxLength={4000} />
@@ -339,6 +350,9 @@ export function DirectorySubmissionForm({
               Select one
             </option>
             <option value="Free">Free</option>
+            <option value="Free with in-app purchases">
+              Free with in-app purchases
+            </option>
             <option value="Paid">Paid</option>
           </Select>
         </FormField>
@@ -362,9 +376,9 @@ export function DirectorySubmissionForm({
       >
         <Select id="accessibility-rating" name="accessibilityRating" defaultValue="">
           <option value="">No rating</option>
-          {RATINGS.map((rating) => (
-            <option key={rating} value={rating}>
-              {rating}
+          {DIRECTORY_ACCESSIBILITY_RATINGS.map((rating) => (
+            <option key={rating.value} value={rating.value}>
+              {directoryAccessibilityRatingLabel(rating.value)}
             </option>
           ))}
         </Select>
@@ -405,13 +419,31 @@ export function DirectorySubmissionForm({
       </div>
       <Button type="submit" disabled={loading}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-        Submit for review
+        {publishesImmediately ? "Publish app" : "Submit for review"}
       </Button>
-      {status ? (
-        <p role="status" aria-live="polite" className="text-sm font-medium">
-          {status}
-        </p>
-      ) : null}
+      <p
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className={
+          status.tone === "success"
+            ? "text-sm font-medium text-[#166534]"
+            : "sr-only"
+        }
+      >
+        {status.tone === "success" ? status.message : ""}
+      </p>
+      <p
+        role="alert"
+        aria-atomic="true"
+        className={
+          status.tone === "error"
+            ? "text-sm font-medium text-[#b91c1c]"
+            : "sr-only"
+        }
+      >
+        {status.tone === "error" ? status.message : ""}
+      </p>
     </form>
   );
 }

@@ -81,20 +81,6 @@ export function ItemTable<T>({
     );
   }
 
-  if (items.length === 0) {
-    return (
-      <div className="rounded-lg border border-[#767676] bg-white p-8 text-center">
-        {emptyIcon && (
-          <div className="mx-auto mb-3 text-[#595959]" aria-hidden="true">
-            {emptyIcon}
-          </div>
-        )}
-        <h3 className="text-lg font-semibold text-[#222222]">{emptyTitle}</h3>
-        <p className="mt-1 text-[#595959]">{emptyMessage}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-2">
       {/* Skip to bottom — hidden until focused, then on-surface and readable. */}
@@ -106,8 +92,13 @@ export function ItemTable<T>({
       </a>
 
       <div className="rounded-lg border border-[#767676]">
-        <div className="overflow-x-auto">
-          <table className="w-full table-fixed">
+        <div
+          className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          role="group"
+          aria-labelledby={`${tableId}-top`}
+          tabIndex={0}
+        >
+          <table className="min-w-[56rem] w-full table-fixed">
             <caption id={`${tableId}-top`} className="sr-only" tabIndex={-1}>
               {caption} — {items.length} item{items.length === 1 ? "" : "s"}
             </caption>
@@ -129,49 +120,68 @@ export function ItemTable<T>({
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr
-                  key={getItemKey(item)}
-                  className="border-t border-[#767676]"
-                >
-                  {columns.map((col) => {
-                    const href =
-                      col.key === nameColumnKey && getItemHref
-                        ? getItemHref(item)
-                        : null;
-                    const content = href ? (
-                      <Link
-                        href={href}
-                        className="break-words text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      >
-                        {col.render(item)}
-                      </Link>
-                    ) : (
-                      col.render(item)
-                    );
+              {items.length === 0 ? (
+                <tr className="border-t border-[#767676]">
+                  <td
+                    colSpan={columns.length}
+                    className="px-3 py-8 text-center"
+                  >
+                    {emptyIcon && (
+                      <div className="mx-auto mb-3 text-[#595959]" aria-hidden="true">
+                        {emptyIcon}
+                      </div>
+                    )}
+                    <h3 className="text-lg font-semibold text-[#222222]">
+                      {emptyTitle}
+                    </h3>
+                    <p className="mt-1 text-[#595959]">{emptyMessage}</p>
+                  </td>
+                </tr>
+              ) : (
+                items.map((item) => (
+                  <tr
+                    key={getItemKey(item)}
+                    className="border-t border-[#767676]"
+                  >
+                    {columns.map((col) => {
+                      const href =
+                        col.key === nameColumnKey && getItemHref
+                          ? getItemHref(item)
+                          : null;
+                      const content = href ? (
+                        <Link
+                          href={href}
+                          className="break-words text-[#0f6cba] underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
+                          {col.render(item)}
+                        </Link>
+                      ) : (
+                        col.render(item)
+                      );
 
-                    if (col.rowHeader) {
+                      if (col.rowHeader) {
+                        return (
+                          <th
+                            key={col.key}
+                            scope="row"
+                            className={`break-words px-3 py-3 align-top font-normal ${col.width || ""} ${alignClass(col.align)}`}
+                          >
+                            {content}
+                          </th>
+                        );
+                      }
                       return (
-                        <th
+                        <td
                           key={col.key}
-                          scope="row"
-                          className={`break-words px-3 py-3 align-top font-normal ${col.width || ""} ${alignClass(col.align)}`}
+                          className={`break-words px-3 py-3 align-top ${col.width || ""} ${alignClass(col.align)}`}
                         >
                           {content}
-                        </th>
+                        </td>
                       );
-                    }
-                    return (
-                      <td
-                        key={col.key}
-                        className={`break-words px-3 py-3 align-top ${col.width || ""} ${alignClass(col.align)}`}
-                      >
-                        {content}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+                    })}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

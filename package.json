@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "ensure-admin": "node scripts/ensure-admin.mjs",
     "migrate:taxonomy-directory": "node scripts/migrate-taxonomy-directory.mjs",
+    "migrate:events": "node scripts/migrate-events.mjs",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push"
   },

@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
+import { inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db, hasDatabase } from "@/db";
-import { directoryEntries } from "@/db/schema";
+import {
+  directoryCategories,
+  directoryEntries,
+  directoryEntryCategories
+} from "@/db/schema";
 import { notifyAdminSubmission, sendSubmissionReceived } from "@/lib/email/client";
-import { getCurrentAppUser } from "@/lib/auth/server";
+import { canModerate, getCurrentAppUser } from "@/lib/auth/server";
 import { paragraphsFromText, slugify } from "@/lib/utils";
 
 const schema = z.object({
@@ -28,6 +33,17 @@ const schema = z.object({
   appStoreUrl: z.string().url(),
   websiteUrl: z.string().url().optional().or(z.literal(""))
 });
+
+function platformTaxonomyPrefix(platform: string) {
+  if (platform === "iOS/iPadOS") return "iOS";
+  if (platform === "VisionOS") return "visionOS";
+  return platform;
+}
+
+function categoryCandidates(platform: string, category: string) {
+  const prefix = platformTaxonomyPrefix(platform);
+  return [`${prefix}: ${category}`, category];
+}
 
 function value(formData: FormData, key: string) {
   const raw = formData.get(key);
@@ -83,6 +99,7 @@ export async function POST(request: Request) {
   }
 
   const data = parsed.data;
+  const autoApprove = canModerate(user.role);
   const detailText = [
     data.description,
     "",
@@ -122,27 +139,49 @@ export async function POST(request: Request) {
       iconUrl: data.iconUrl || null,
       appStoreUrl: data.appStoreUrl,
       websiteUrl: data.websiteUrl || null,
-      status: "pending",
-      submittedBy: user.id
+      status: autoApprove ? "approved" : "pending",
+      submittedBy: user.id,
+      approvedBy: autoApprove ? user.id : null
     })
     .returning();
 
-  void notifyAdminSubmission({
-    kind: "directory",
-    itemTitle: data.appName,
-    rows: [
-      ["App", data.appName],
-      ["Platform", data.platform],
-      ["Category", data.category],
-      ["Submitted by", user.email],
-      ["Review queue ID", String(entry?.id ?? "")]
-    ]
-  });
-  void sendSubmissionReceived(user.email, {
-    kind: "directory",
-    name: user.displayName,
-    itemTitle: data.appName
-  });
+  if (entry) {
+    const candidates = categoryCandidates(data.platform, data.category);
+    const [category] = await db
+      .select({ id: directoryCategories.id })
+      .from(directoryCategories)
+      .where(inArray(directoryCategories.name, candidates))
+      .limit(1);
 
-  return NextResponse.json({ id: entry?.id, status: "pending" });
+    if (category) {
+      await db.insert(directoryEntryCategories).values({
+        entryId: entry.id,
+        categoryId: category.id
+      });
+    }
+  }
+
+  if (!autoApprove) {
+    void notifyAdminSubmission({
+      kind: "directory",
+      itemTitle: data.appName,
+      rows: [
+        ["App", data.appName],
+        ["Platform", data.platform],
+        ["Category", data.category],
+        ["Submitted by", user.email],
+        ["Review queue ID", String(entry?.id ?? "")]
+      ]
+    });
+    void sendSubmissionReceived(user.email, {
+      kind: "directory",
+      name: user.displayName,
+      itemTitle: data.appName
+    });
+  }
+
+  return NextResponse.json({
+    id: entry?.id,
+    status: autoApprove ? "approved" : "pending"
+  });
 }

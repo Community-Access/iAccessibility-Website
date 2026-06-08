@@ -1,6 +1,56 @@
 # iAccessibility Agent Notes
 
-Last updated: 2026-06-07
+Last updated: 2026-06-08
+
+## Session 2026-06-08: events flow, directory filters, admin polish
+
+Taylor's priority for this session: make events postable today, remove
+WordPress-era verbosity, and keep the admin aligned with Start-testing patterns.
+
+Changes in this branch:
+- Events are no longer a placeholder. Added `events` table/schema, canonical
+  public `/events` month view, `.ics` download route, Google/Outlook calendar
+  links, and admin-only `/admin/events` create/manage screen. `/my-calendar` is
+  a compatibility redirect only; do not build new UI around the old My Calendar
+  plugin slug. Admin dashboard and nav now include Events. Database note:
+  Drizzle push prompted for an unrelated `podcast_shows.itunes_category` vs
+  `category` rename, so the events table and indexes were applied with narrow
+  SQL on 2026-06-08 to avoid touching podcasts.
+- WordPress event migration exists at `scripts/migrate-events.mjs`. It parses
+  `mc-events` + `_mc_event_data` from `migration/wordpress-export`, skips My
+  Calendar demo events by default, and upserts into the custom `events` table.
+  Run with `npm run migrate:events`; dry-run with `npm run migrate:events -- --dry`.
+  Imported on 2026-06-08: 13 expanded occurrences of `iAccessibility Community
+  call` (`wp-32121`) from 2026-05-02 through 2027-05-01.
+- App Directory ratings are filters only, not user-facing categories. Rating
+  values still preserve the migrated taxonomy values internally, but form/filter
+  labels read as "Fully Accessible", "Mostly Accessible", etc. without the
+  noisy numeric prefix.
+- Directory submission autofill from the Apple App Store forces
+  `iOS/iPadOS`, uses base categories from the Start-testing-style filter data,
+  clears App Store results after selection, focuses App Version, and admins/
+  moderators publish directly instead of entering the review queue.
+- Directory cards now expose long descriptions through an expandable full
+  description block instead of leaving cards feeling cut off.
+- Admin media library now uses the shared `ItemTable` style with search, media
+  type filters (image/video/audio/other), inline alt text editing, open/copy,
+  and delete confirmation.
+- Admin navigation no longer adds an extra `aria-label` to the section nav.
+  Current page announcements remain through `aria-current`.
+- `/plus` no longer renders the old WordPress "join" page. It is now Community
+  Resources with contribution, directory, events, iACast, and account links.
+  Discord copy is gone.
+- "Submit a blog post" now links to `/report#submit-report`, and the Report form
+  is rendered before latest posts so the anchor lands on the form.
+- Shared confirmation modals now support focusing the Cancel button on open;
+  event/media delete confirmations use that safer initial focus.
+
+Still important:
+- WordPress user migration remains pending. Private export has 484 users in
+  `migration/wordpress-export/wp-users.json`.
+- Audio/podcast submissions still need a dedicated submit flow and review/
+  decision workflow; current menu points at iACast until that route is built.
+- Post trash is still hard delete. Restorable trash needs a schema change.
 
 ## Session 2026-06-07 (PM): admin rebuild, emails, directory
 
@@ -268,7 +318,7 @@ are unaffected (API is backward-compatible).
 - Public content pages read Neon first and fall back to live WordPress REST while Neon
   content tables are empty.
 - Added public routes: `/`, `/blog`, `/blog/[slug]`, `/report`, `/iacast-network`,
-  `/app-directory`, `/app-directory/submit`, `/plus`, `/my-calendar`, `/about`.
+  `/app-directory`, `/app-directory/submit`, `/plus`, `/events`, `/about`.
 - Forums are not exposed in navigation or as a public placeholder route.
 - Added authenticated submission API routes:
   - `/api/submissions/directory` writes pending `directory_entries` using current schema.
@@ -411,8 +461,8 @@ are unaffected (API is backward-compatible).
     `podcast_shows`/`podcast_episodes` are EMPTY — the iACast nav page has no data. Big win, ready
     to script.
   - PAGES: 279 in `wp-pages.json`, `pages` table is EMPTY.
-  - EVENTS: my_calendar plugin data (only 2 `mc-events` in the small export file; the calendar
-    table was not fully exported).
+  - EVENTS: custom `events` table exists and has a migration script. The small export had
+    2 `mc-events`; one was a My Calendar demo event and was intentionally skipped.
 - MEDIA IMPORT ISSUES (confirmed):
   1. ZERO rehosting — all 511 media URLs and all 705 featured images still point at live
      `iaccessibility.net/wp-content`. The rebuild is still fully dependent on the WP site.

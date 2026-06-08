@@ -10,10 +10,7 @@ export function AdminNav({ sections }: { sections: AdminSection[] }) {
   const pathname = usePathname();
 
   return (
-    <nav
-      aria-label="Admin sections"
-      className="rounded-lg bg-white p-4 shadow-wordpress"
-    >
+    <nav className="rounded-lg bg-white p-4 shadow-wordpress">
       <ul className="space-y-1">
         {sections.map((section) => {
           const active =

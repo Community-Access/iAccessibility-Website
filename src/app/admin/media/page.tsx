@@ -37,12 +37,17 @@ export default async function AdminMediaPage() {
         <h1 className="text-3xl font-bold">Media library</h1>
         <p className="mt-3 text-[#595959]">
           {items.length.toLocaleString()} item{items.length === 1 ? "" : "s"}.
-          Edit alt text, copy a URL, or delete media uploaded in the editor.
         </p>
       </div>
 
       <div className="wp-article">
-        <h2 className="mb-4 text-2xl font-semibold">All media</h2>
+        <h2
+          id="media-library-heading"
+          tabIndex={-1}
+          className="mb-4 text-2xl font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          All media
+        </h2>
         <MediaManager items={items} />
       </div>
     </div>

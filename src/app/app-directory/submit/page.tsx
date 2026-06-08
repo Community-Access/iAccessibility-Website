@@ -1,10 +1,21 @@
 import { DirectorySubmissionForm } from "@/components/forms/directory-submission-form";
-import { getDirectoryCategories } from "@/lib/content/wordpress";
+import { canModerate, getCurrentAppUser } from "@/lib/auth/server";
+import {
+  directorySubmissionCategoryNames,
+  getDirectoryCategories
+} from "@/lib/content/wordpress";
 
 export const dynamic = "force-dynamic";
 
 export default async function SubmitAppPage() {
-  const categories = await getDirectoryCategories();
+  const [categories, user] = await Promise.all([
+    getDirectoryCategories(),
+    getCurrentAppUser()
+  ]);
+  const categoryNames = directorySubmissionCategoryNames(
+    categories.map((category) => category.name)
+  );
+  const publishesImmediately = canModerate(user?.role);
 
   return (
     <div className="wp-container">
@@ -17,7 +28,8 @@ export default async function SubmitAppPage() {
           </p>
         </header>
         <DirectorySubmissionForm
-          categories={categories.map((category) => category.name)}
+          categories={categoryNames}
+          publishesImmediately={publishesImmediately}
         />
       </article>
     </div>

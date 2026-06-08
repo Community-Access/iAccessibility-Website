@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { forwardRef, useEffect, useRef, useCallback } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,8 +16,12 @@ interface ModalProps {
   description?: string;
   children: React.ReactNode;
   className?: string;
+  role?: "dialog" | "alertdialog";
   triggerRef?: React.RefObject<HTMLElement | null>;
   initialFocusRef?: React.RefObject<HTMLElement | null>;
+  initialFocus?: "close" | "title";
+  fallbackFocusRef?: React.RefObject<HTMLElement | null>;
+  fallbackFocusSelector?: string;
 }
 
 export function Modal({
@@ -27,11 +31,16 @@ export function Modal({
   description,
   children,
   className,
+  role,
   triggerRef,
-  initialFocusRef
+  initialFocusRef,
+  initialFocus = "close",
+  fallbackFocusRef,
+  fallbackFocusSelector
 }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
   const savedScrollPosition = useRef(0);
   const wasOpen = useRef(false);
@@ -45,16 +54,24 @@ export function Modal({
       wasOpen.current = true;
     } else if (wasOpen.current) {
       wasOpen.current = false;
-      const target = triggerRef?.current || previousActiveElement.current;
+      const fallbackFromSelector = fallbackFocusSelector
+        ? document.querySelector<HTMLElement>(fallbackFocusSelector)
+        : null;
+      const target =
+        [
+          triggerRef?.current,
+          previousActiveElement.current,
+          fallbackFocusRef?.current,
+          fallbackFromSelector
+        ].find((item) => item && document.contains(item)) ?? null;
       const scrollY = savedScrollPosition.current;
       window.scrollTo(0, scrollY);
-      // Only refocus if the element is still in the document.
-      if (target && document.contains(target)) {
+      if (target) {
         target.focus({ preventScroll: true });
         window.scrollTo(0, scrollY);
       }
     }
-  }, [isOpen, triggerRef]);
+  }, [fallbackFocusRef, fallbackFocusSelector, isOpen, triggerRef]);
 
   // Show/hide the dialog and set initial focus.
   useEffect(() => {
@@ -62,10 +79,12 @@ export function Modal({
     if (!dialog) return;
 
     if (isOpen) {
-      dialog.showModal();
+      if (!dialog.open) dialog.showModal();
       requestAnimationFrame(() => {
         if (initialFocusRef?.current) {
           initialFocusRef.current.focus({ preventScroll: true });
+        } else if (initialFocus === "title") {
+          titleRef.current?.focus({ preventScroll: true });
         } else {
           closeButtonRef.current?.focus({ preventScroll: true });
         }
@@ -141,6 +160,7 @@ export function Modal({
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
+      role={role}
       aria-modal="true"
       aria-labelledby="modal-title"
       aria-describedby={description ? "modal-description" : undefined}
@@ -163,6 +183,8 @@ export function Modal({
 
         <h2
           id="modal-title"
+          ref={titleRef}
+          tabIndex={-1}
           className="pr-10 text-lg font-semibold text-[#222222]"
         >
           {title}
@@ -192,13 +214,17 @@ interface ModalButtonProps {
   children: React.ReactNode;
 }
 
-export function ModalButton({
-  variant = "secondary",
-  onClick,
-  disabled,
-  type = "button",
-  children
-}: ModalButtonProps) {
+export const ModalButton = forwardRef<HTMLButtonElement, ModalButtonProps>(
+  function ModalButton(
+    {
+      variant = "secondary",
+      onClick,
+      disabled,
+      type = "button",
+      children
+    },
+    ref
+  ) {
   const base =
     "rounded-md px-4 py-2 font-medium transition-colors disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card";
 
@@ -211,6 +237,7 @@ export function ModalButton({
 
   return (
     <button
+      ref={ref}
       type={type}
       onClick={onClick}
       disabled={disabled}
@@ -219,4 +246,5 @@ export function ModalButton({
       {children}
     </button>
   );
-}
+  }
+);

@@ -88,7 +88,11 @@ export default async function AdminPostsPage() {
       </div>
 
       <div className="wp-article">
-        <h2 id="recent-posts-heading" className="mb-4 text-2xl font-semibold">
+        <h2
+          id="recent-posts-heading"
+          tabIndex={-1}
+          className="mb-4 text-2xl font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
           All posts
         </h2>
         <ItemTable

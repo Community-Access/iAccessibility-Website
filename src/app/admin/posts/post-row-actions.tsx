@@ -18,6 +18,7 @@ export function PostRowActions({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   function handleUnpublish() {
     startTransition(async () => {
@@ -75,10 +76,17 @@ export function PostRowActions({
         onClose={() => setConfirmOpen(false)}
         title="Delete this post?"
         description={`"${title}" will be permanently deleted. This cannot be undone.`}
+        role="alertdialog"
         triggerRef={deleteTriggerRef}
+        initialFocusRef={cancelRef}
+        fallbackFocusSelector="#recent-posts-heading"
       >
         <ModalActions>
-          <ModalButton variant="secondary" onClick={() => setConfirmOpen(false)}>
+          <ModalButton
+            ref={cancelRef}
+            variant="secondary"
+            onClick={() => setConfirmOpen(false)}
+          >
             Cancel
           </ModalButton>
           <ModalButton

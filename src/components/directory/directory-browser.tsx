@@ -4,16 +4,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Filter, Search, X } from "lucide-react";
 import { BrandedMediaFrame } from "@/components/layout/branded-media-frame";
 import { Modal, ModalActions, ModalButton } from "@/components/ui/modal";
-import type { DirectoryEntrySummary } from "@/lib/content/wordpress";
+import {
+  DIRECTORY_ACCESSIBILITY_RATINGS,
+  directoryAccessibilityRatingLabel,
+  type DirectoryEntrySummary
+} from "@/lib/content/wordpress";
 
 const DEFAULT_RECENT = 10;
-const DEFAULT_RATINGS = [
-  "5 - Fully Accessible",
-  "4 - Mostly Accessible",
-  "3 - Average",
-  "2 - Needs Work",
-  "1 - Not Accessible"
-];
+const DEFAULT_RATINGS = DIRECTORY_ACCESSIBILITY_RATINGS.map(
+  (rating) => rating.value
+);
 
 type FilterKind = "category" | "platform" | "rating";
 
@@ -25,6 +25,26 @@ function toggleValue(values: string[], value: string) {
 
 function countLabel(count: number) {
   return `${count} app${count === 1 ? "" : "s"}`;
+}
+
+function DescriptionBlock({ description }: { description: string }) {
+  const text = description.trim();
+  const limit = 320;
+  if (text.length <= limit) {
+    return <p className="mt-2 text-sm text-[#595959]">{text}</p>;
+  }
+
+  return (
+    <div className="mt-2 text-sm text-[#595959]">
+      <p>{text.slice(0, limit).trim()}...</p>
+      <details className="mt-2">
+        <summary className="cursor-pointer font-semibold text-[#0f6cba] underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          Show full description
+        </summary>
+        <p className="mt-2">{text}</p>
+      </details>
+    </div>
+  );
 }
 
 export function DirectoryBrowser({
@@ -157,7 +177,7 @@ export function DirectoryBrowser({
       } else {
         setAnnouncement(`${n} app${n === 1 ? "" : "s"} found.`);
       }
-    }, 20);
+    }, 450);
     setAnnouncement("");
     return () => window.clearTimeout(timer);
   }, [
@@ -190,7 +210,6 @@ export function DirectoryBrowser({
     setPendingCategories([]);
     setPendingPlatforms([]);
     setPendingRatings([]);
-    setAnnouncement(`${entries.length} app${entries.length === 1 ? "" : "s"} available.`);
   }
 
   function removeFilter(kind: FilterKind, value: string) {
@@ -214,10 +233,12 @@ export function DirectoryBrowser({
         type="button"
         onClick={() => removeFilter(kind, value)}
         className="inline-flex items-center gap-1.5 rounded-full border border-[#767676] bg-white px-3 py-1 text-sm font-medium text-[#222222] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        aria-label={`Remove ${prefix.toLowerCase()} filter ${value}`}
+        aria-label={`Remove ${prefix.toLowerCase()} filter ${
+          kind === "rating" ? directoryAccessibilityRatingLabel(value) : value
+        }`}
       >
         <span className="sr-only">{prefix}: </span>
-        {value}
+        {kind === "rating" ? directoryAccessibilityRatingLabel(value) : value}
         <X className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     );
@@ -357,13 +378,12 @@ export function DirectoryBrowser({
                       ) : null}
                       {entry.accessibilityRating ? (
                         <p className="mt-2 text-sm font-medium text-[#222222]">
-                          Accessibility rating: {entry.accessibilityRating}
+                          Accessibility rating:{" "}
+                          {directoryAccessibilityRatingLabel(entry.accessibilityRating)}
                         </p>
                       ) : null}
                       {entry.description ? (
-                        <p className="mt-2 text-sm text-[#595959]">
-                          {entry.description}
-                        </p>
+                        <DescriptionBlock description={entry.description} />
                       ) : null}
                     </div>
                   </article>
@@ -380,7 +400,7 @@ export function DirectoryBrowser({
         title="Filter apps"
         description="Select categories, platforms, and accessibility ratings to narrow the directory."
         triggerRef={filterButtonRef}
-        initialFocusRef={filterFirstFieldRef}
+        initialFocus="title"
       >
         <div className="space-y-6">
           <fieldset className="border-0 p-0">
@@ -462,7 +482,7 @@ export function DirectoryBrowser({
                       className="h-4 w-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     />
                     <span>
-                      {rating}
+                      {directoryAccessibilityRatingLabel(rating)}
                       <span aria-hidden="true"> ({count})</span>
                       <span className="sr-only">, {countLabel(count)}</span>
                     </span>

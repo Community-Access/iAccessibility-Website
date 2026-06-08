@@ -204,6 +204,34 @@ export const media = pgTable("media", {
   createdAt: timestamp("created_at").notNull().defaultNow()
 });
 
+export const events = pgTable(
+  "events",
+  {
+    id: serial("id").primaryKey(),
+    title: text("title").notNull(),
+    slug: text("slug").notNull().unique(),
+    description: text("description"),
+    eventDate: text("event_date").notNull(),
+    startTime: text("start_time").notNull(),
+    endTime: text("end_time"),
+    timezone: text("timezone").notNull().default("America/Chicago"),
+    type: text("type").notNull().default("stream"),
+    location: text("location"),
+    locationUrl: text("location_url"),
+    status: contentStatus("status").notNull().default("published"),
+    createdBy: integer("created_by").references(() => users.id, {
+      onDelete: "set null"
+    }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow()
+  },
+  (table) => ({
+    statusIdx: index("events_status_idx").on(table.status),
+    dateIdx: index("events_event_date_idx").on(table.eventDate),
+    createdByIdx: index("events_created_by_idx").on(table.createdBy)
+  })
+);
+
 export const podcastShows = pgTable("podcast_shows", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),

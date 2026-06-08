@@ -123,8 +123,8 @@ export const NAV_ITEMS = [
   { label: "Report", href: "/report" },
   { label: "iACast", href: "/iacast-network" },
   { label: "App Directory", href: "/app-directory" },
-  { label: "Community", href: "/plus" },
-  { label: "Events", href: "/my-calendar" },
+  { label: "Resources", href: "/plus" },
+  { label: "Events", href: "/events" },
   { label: "About", href: "/about" }
 ];
 
@@ -166,19 +166,26 @@ export const DIRECTORY_CATEGORIES = [
   "Weather"
 ];
 
-const DIRECTORY_ACCESSIBILITY_RATINGS = [
-  "5 - Fully Accessible",
-  "4 - Mostly Accessible",
-  "3 - Average",
-  "2 - Needs Work",
-  "1 - Not Accessible"
+export const DIRECTORY_ACCESSIBILITY_RATINGS = [
+  { value: "5 - Fully Accessible", label: "Fully Accessible", score: 5 },
+  { value: "4 - Mostly Accessible", label: "Mostly Accessible", score: 4 },
+  { value: "3 - Average", label: "Average", score: 3 },
+  { value: "2 - Needs Work", label: "Needs Work", score: 2 },
+  { value: "1 - Not Accessible", label: "Not Accessible", score: 1 }
 ];
 
 function directoryRatingForScore(score: string | number) {
   return (
     DIRECTORY_ACCESSIBILITY_RATINGS.find((rating) =>
-      rating.startsWith(`${score} -`)
-    ) ?? null
+      rating.value.startsWith(`${score} -`)
+    )?.value ?? null
+  );
+}
+
+export function directoryAccessibilityRatingLabel(value: string) {
+  return (
+    DIRECTORY_ACCESSIBILITY_RATINGS.find((rating) => rating.value === value)
+      ?.label ?? value.replace(/^[1-5]\s*-\s*/, "")
   );
 }
 
@@ -542,10 +549,23 @@ function directoryAccessibilityRating(description: string | null) {
   return (
     scoreRating ??
     DIRECTORY_ACCESSIBILITY_RATINGS.find((rating) =>
-      ratingText.includes(rating.toLowerCase())
-    ) ??
+      ratingText.includes(rating.value.toLowerCase())
+    )?.value ??
     null
   );
+}
+
+export function directorySubmissionCategoryNames(names: string[]) {
+  const normalized = new Set<string>();
+  for (const name of names) {
+    const { category } = splitDirectoryCategoryName(name);
+    if (!category) continue;
+    if (directoryAccessibilityRatingFromCategory(category)) continue;
+    normalized.add(category);
+  }
+
+  const values = normalized.size > 0 ? Array.from(normalized) : DIRECTORY_CATEGORIES;
+  return values.sort((a, b) => a.localeCompare(b));
 }
 
 export async function getDirectoryEntries(): Promise<DirectoryEntrySummary[]> {
@@ -603,8 +623,8 @@ export async function getDirectoryEntries(): Promise<DirectoryEntrySummary[]> {
   return rows.map((entry) => {
     const bucket = facetsByEntry.get(entry.id);
     const taxonomyRating = DIRECTORY_ACCESSIBILITY_RATINGS.find((rating) =>
-      bucket?.ratings.has(rating)
-    );
+      bucket?.ratings.has(rating.value)
+    )?.value;
     return {
       id: entry.id,
       appName: entry.appName,

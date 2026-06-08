@@ -3,6 +3,7 @@ import Link from "next/link";
 import { count, eq } from "drizzle-orm";
 import {
   Bell,
+  CalendarDays,
   FileText,
   FolderOpen,
   Image,
@@ -16,6 +17,7 @@ import { db, hasDatabase } from "@/db";
 import {
   blogPosts,
   directoryEntries,
+  events,
   podcastEpisodes,
   users
 } from "@/db/schema";
@@ -36,7 +38,12 @@ async function pendingCount(table: typeof blogPosts | typeof directoryEntries) {
 }
 
 async function countAll(
-  table: typeof users | typeof blogPosts | typeof directoryEntries | typeof podcastEpisodes
+  table:
+    | typeof users
+    | typeof blogPosts
+    | typeof directoryEntries
+    | typeof podcastEpisodes
+    | typeof events
 ) {
   if (!hasDatabase || !db) return 0;
   const [row] = await db.select({ value: count() }).from(table);
@@ -213,7 +220,8 @@ export default async function AdminDashboard() {
     totalPosts,
     publishedPosts,
     approvedDirectory,
-    totalEpisodes
+    totalEpisodes,
+    totalEvents
   ] = await Promise.all([
     pendingCount(blogPosts),
     pendingCount(directoryEntries),
@@ -224,7 +232,8 @@ export default async function AdminDashboard() {
     countAll(blogPosts),
     postStatusCount("published"),
     directoryStatusCount("approved"),
-    countAll(podcastEpisodes)
+    countAll(podcastEpisodes),
+    countAll(events)
   ]);
   const pendingTotal = pendingPosts + pendingDirectory;
 
@@ -305,6 +314,13 @@ export default async function AdminDashboard() {
                 detail: "Upload and manage images",
                 icon: Image,
                 gradient: gradientStyles.pinkPurple
+              },
+              {
+                href: "/admin/events",
+                label: "Add an event",
+                detail: `${totalEvents.toLocaleString()} event${totalEvents === 1 ? "" : "s"} total`,
+                icon: CalendarDays,
+                gradient: gradientStyles.purpleCyan
               },
               {
                 href: "/admin/podcasts",

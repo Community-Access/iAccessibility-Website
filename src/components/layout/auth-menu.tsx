@@ -239,7 +239,7 @@ export function AuthMenu() {
             </Link>
 
             <Link
-              href="/report"
+              href="/report#submit-report"
               role="menuitem"
               tabIndex={-1}
               onClick={() => setOpen(false)}
@@ -343,6 +343,18 @@ export function MobileAuthActions() {
         className="rounded-md border border-white/50 px-3 py-2 text-center text-sm font-semibold text-white"
       >
         Submit App
+      </Link>
+      <Link
+        href="/report#submit-report"
+        className="rounded-md border border-white/50 px-3 py-2 text-center text-sm font-semibold text-white"
+      >
+        Submit Blog Post
+      </Link>
+      <Link
+        href="/iacast-network"
+        className="rounded-md border border-white/50 px-3 py-2 text-center text-sm font-semibold text-white"
+      >
+        Submit Podcast
       </Link>
       {canAccessAdminRole(appRole) ? (
         <Link
