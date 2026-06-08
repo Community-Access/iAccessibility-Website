@@ -225,9 +225,18 @@ export default async function AdminDashboard() {
         </div>
       ) : null}
 
-      <p className="text-sm text-[#595959]">
-        Podcast episodes imported: {totalEpisodes.toLocaleString()}.
-      </p>
+      {isAdmin ? (
+        <p className="text-sm text-[#595959]">
+          {totalEpisodes.toLocaleString()} podcast episode
+          {totalEpisodes === 1 ? "" : "s"} imported.{" "}
+          <Link
+            href="/admin/podcasts"
+            className="text-[#0f6cba] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            Browse podcasts
+          </Link>
+        </p>
+      ) : null}
     </div>
   );
 }
