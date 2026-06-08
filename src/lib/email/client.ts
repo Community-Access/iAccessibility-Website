@@ -1,4 +1,7 @@
 import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import { inArray } from "drizzle-orm";
+import { db, hasDatabase } from "@/db";
+import { users } from "@/db/schema";
 import { absoluteUrl, escapeHtml } from "@/lib/utils";
 
 const FROM_NAME = "iAccessibility";
@@ -372,12 +375,48 @@ async function deliver(to: string | null | undefined, content: EmailContent) {
   }
 }
 
+/**
+ * Every moderator and administrator (the people who can approve content).
+ * Falls back to the configured review inbox if none are found, so a
+ * notification is never silently dropped.
+ */
+async function reviewerEmails(): Promise<string[]> {
+  if (hasDatabase && db) {
+    try {
+      const rows = await db
+        .select({ email: users.email })
+        .from(users)
+        .where(inArray(users.role, ["admin", "moderator"]));
+      const emails = Array.from(
+        new Set(
+          rows
+            .map((row) => row.email)
+            .filter((email): email is string => Boolean(email))
+        )
+      );
+      if (emails.length > 0) return emails;
+    } catch (error) {
+      console.error("Could not load reviewer emails:", error);
+    }
+  }
+  const fallback = reviewEmail();
+  return fallback ? [fallback] : [];
+}
+
+/** Send one email to every moderator and administrator. */
+async function deliverToReviewers(content: EmailContent) {
+  const recipients = await reviewerEmails();
+  await Promise.allSettled(
+    recipients.map((to) => deliver(to, content))
+  );
+}
+
 export function sendWelcomeEmail(to: string, name?: string | null) {
   return deliver(to, welcomeEmail({ name }));
 }
 
 export function notifyAdminNewUser(params: { email: string; name?: string | null }) {
-  return deliver(reviewEmail(), adminNewUserEmail(params));
+  return deliverToReviewers(adminNewUserEmail(params));
 }
 
 export function sendSubmissionReceived(
@@ -392,7 +431,7 @@ export function notifyAdminSubmission(params: {
   itemTitle: string;
   rows: Array<[string, string | null | undefined]>;
 }) {
-  return deliver(reviewEmail(), adminSubmissionEmail(params));
+  return deliverToReviewers(adminSubmissionEmail(params));
 }
 
 export function sendSubmissionDecision(
