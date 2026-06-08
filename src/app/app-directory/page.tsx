@@ -13,36 +13,21 @@ export const metadata: Metadata = {
   title: "App Directory"
 };
 
-export default async function AppDirectoryPage({
-  searchParams
-}: {
-  searchParams: Promise<{
-    q?: string;
-    platform?: string | string[];
-    category?: string;
-    page?: string;
-  }>;
-}) {
-  const { q, platform, category, page } = await searchParams;
+export default async function AppDirectoryPage() {
   const entries = await getDirectoryEntries();
   const facets = deriveDirectoryFacets(entries);
-
-  const initialPlatforms = (
-    Array.isArray(platform) ? platform : platform ? [platform] : []
-  ).filter((value) => facets.platforms.includes(value));
-  const initialPage = Math.max(1, Number.parseInt(page ?? "1", 10) || 1);
 
   return (
     <div className="wp-container space-y-10">
       <section className="wp-article text-center">
         <h1 className="text-3xl font-bold">App Directory</h1>
         <p className="mx-auto mt-4 max-w-3xl text-lg">
-          Find accessibility information for apps across popular platforms. New
-          submissions enter a pending-review queue before publishing.
+          Find accessibility information for apps across popular platforms.
+          Browse by category or filter to find what you need.
         </p>
         <div className="mt-5">
           <Button asChild>
-            <Link href="/app-directory/submit">Submit App</Link>
+            <Link href="/app-directory/submit">Submit an app</Link>
           </Button>
         </div>
       </section>
@@ -59,14 +44,8 @@ export default async function AppDirectoryPage({
         ) : (
           <DirectoryBrowser
             entries={entries}
-            platformFacets={facets.platforms}
-            categoryFacets={facets.categories}
-            initialQuery={q ?? ""}
-            initialPlatforms={initialPlatforms}
-            initialCategory={
-              category && facets.categories.includes(category) ? category : ""
-            }
-            initialPage={initialPage}
+            categories={facets.categories}
+            platforms={facets.platforms}
           />
         )}
       </div>
@@ -81,7 +60,7 @@ export default async function AppDirectoryPage({
         </p>
         <div className="mt-4">
           <Button asChild>
-            <Link href="/app-directory/submit">Submit App</Link>
+            <Link href="/app-directory/submit">Submit an app</Link>
           </Button>
         </div>
       </div>

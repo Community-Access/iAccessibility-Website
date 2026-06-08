@@ -1,493 +1,339 @@
 "use client";
 
-import { ExternalLink, Search, X } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Filter } from "lucide-react";
 import { BrandedMediaFrame } from "@/components/layout/branded-media-frame";
+import { Modal, ModalActions, ModalButton } from "@/components/ui/modal";
 import type { DirectoryEntrySummary } from "@/lib/content/wordpress";
 
-const PER_PAGE = 12;
-
-type Props = {
-  entries: DirectoryEntrySummary[];
-  platformFacets: string[];
-  categoryFacets: string[];
-  initialQuery?: string;
-  initialPlatforms?: string[];
-  initialCategory?: string;
-  initialPage?: number;
-};
-
-const linkClass =
-  "inline-flex items-center gap-1 font-medium text-[#0f6cba] underline underline-offset-2 hover:text-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf] rounded";
-
-const pageLinkClass =
-  "inline-flex min-w-[2.5rem] items-center justify-center gap-1 rounded-md border border-[#6b6b6b] px-3 py-2 text-sm font-medium text-[#222222] hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf]";
-const pageCurrentClass =
-  "inline-flex min-w-[2.5rem] items-center justify-center rounded-md bg-[#0066bf] px-3 py-2 text-sm font-semibold text-white";
-const pageDisabledClass =
-  "inline-flex items-center gap-1 rounded-md border border-[#d4d4d4] px-3 py-2 text-sm text-[#767676]";
+const DEFAULT_RECENT = 10;
 
 export function DirectoryBrowser({
   entries,
-  platformFacets,
-  categoryFacets,
-  initialQuery = "",
-  initialPlatforms = [],
-  initialCategory = "",
-  initialPage = 1
-}: Props) {
-  const router = useRouter();
-  const pathname = usePathname();
+  categories,
+  platforms
+}: {
+  entries: DirectoryEntrySummary[];
+  categories: string[];
+  platforms: string[];
+}) {
+  // Category is a single-select quick filter (radio group). Search + platforms
+  // are staged in the Filter modal and applied on "Apply".
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [search, setSearch] = useState("");
+  const [activePlatforms, setActivePlatforms] = useState<string[]>([]);
 
-  const [query, setQuery] = useState(initialQuery);
-  const [selectedPlatforms, setSelectedPlatforms] =
-    useState<string[]>(initialPlatforms);
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
-  const [page, setPage] = useState(initialPage);
-  const [liveMessage, setLiveMessage] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [pendingSearch, setPendingSearch] = useState("");
+  const [pendingPlatforms, setPendingPlatforms] = useState<string[]>([]);
 
-  const resultsHeadingRef = useRef<HTMLHeadingElement>(null);
-  const didMountRef = useRef(false);
-  const pageChangedByUserRef = useRef(false);
+  const [announcement, setAnnouncement] = useState("");
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const didMount = useRef(false);
 
-  const normalizedQuery = query.trim().toLowerCase();
-
-  const filtered = useMemo(() => {
-    return entries.filter((entry) => {
-      if (
-        normalizedQuery &&
-        !`${entry.appName} ${entry.description}`
-          .toLowerCase()
-          .includes(normalizedQuery)
-      ) {
-        return false;
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const entry of entries) {
+      for (const category of entry.categories) {
+        counts.set(category, (counts.get(category) ?? 0) + 1);
       }
-      if (
-        selectedPlatforms.length > 0 &&
-        !selectedPlatforms.some((platform) =>
-          entry.platforms.includes(platform)
-        )
-      ) {
-        return false;
-      }
-      if (selectedCategory && !entry.categories.includes(selectedCategory)) {
-        return false;
-      }
-      return true;
-    });
-  }, [entries, normalizedQuery, selectedPlatforms, selectedCategory]);
+    }
+    return counts;
+  }, [entries]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
-  const safePage = Math.min(page, totalPages);
-  const visible = filtered.slice(
-    (safePage - 1) * PER_PAGE,
-    (safePage - 1) * PER_PAGE + PER_PAGE
+  // id descending = most recent first.
+  const byRecency = useMemo(
+    () => [...entries].sort((a, b) => b.id - a.id),
+    [entries]
   );
 
-  // Keep the URL in sync so results are shareable and the back button works.
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (query.trim()) params.set("q", query.trim());
-    selectedPlatforms.forEach((platform) => params.append("platform", platform));
-    if (selectedCategory) params.set("category", selectedCategory);
-    if (safePage > 1) params.set("page", String(safePage));
-    const queryString = params.toString();
-    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
-      scroll: false
-    });
-  }, [query, selectedPlatforms, selectedCategory, safePage, pathname, router]);
+  const filtered = useMemo(() => {
+    let list = byRecency;
+    if (selectedCategory) {
+      list = list.filter((entry) =>
+        entry.categories.includes(selectedCategory)
+      );
+    }
+    if (activePlatforms.length > 0) {
+      list = list.filter((entry) =>
+        activePlatforms.some((platform) => entry.platforms.includes(platform))
+      );
+    }
+    const query = search.trim().toLowerCase();
+    if (query) {
+      list = list.filter(
+        (entry) =>
+          entry.appName.toLowerCase().includes(query) ||
+          entry.description.toLowerCase().includes(query)
+      );
+    }
+    return list;
+  }, [byRecency, selectedCategory, activePlatforms, search]);
 
-  // Announce the result count (debounced so typing does not spam).
-  useEffect(() => {
-    const handle = setTimeout(() => {
-      if (filtered.length === 0) {
-        setLiveMessage("No apps found. Adjust your search or filters.");
-      } else {
-        setLiveMessage(
-          `${filtered.length} ${filtered.length === 1 ? "app" : "apps"} found` +
-            (totalPages > 1 ? `, page ${safePage} of ${totalPages}` : "")
-        );
-      }
-    }, 400);
-    return () => clearTimeout(handle);
-  }, [filtered.length, safePage, totalPages]);
+  const hasActiveFilter = Boolean(
+    selectedCategory || search.trim() || activePlatforms.length
+  );
+  const visible = hasActiveFilter ? filtered : filtered.slice(0, DEFAULT_RECENT);
+  const isSearching = Boolean(search.trim());
+  const headingText = isSearching
+    ? "Search results"
+    : selectedCategory || "Recent apps";
+  const activeFilterCount = (search.trim() ? 1 : 0) + activePlatforms.length;
 
-  // After a user changes the page, move focus to the results heading so
-  // keyboard and screen reader users land at the new results.
+  // Announce result changes (never on initial mount).
   useEffect(() => {
-    if (!didMountRef.current) {
-      didMountRef.current = true;
+    if (!didMount.current) {
+      didMount.current = true;
       return;
     }
-    if (pageChangedByUserRef.current) {
-      pageChangedByUserRef.current = false;
-      resultsHeadingRef.current?.focus();
+    const n = visible.length;
+    if (n === 0) {
+      setAnnouncement(
+        isSearching ? `No apps found for "${search.trim()}".` : "No apps found."
+      );
+    } else if (selectedCategory && !isSearching) {
+      setAnnouncement(
+        `Loaded ${n} app${n === 1 ? "" : "s"} in ${selectedCategory}.`
+      );
+    } else {
+      setAnnouncement(`${n} app${n === 1 ? "" : "s"} found.`);
     }
-  }, [safePage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible.length, selectedCategory, search]);
 
-  const goToPage = useCallback((next: number) => {
-    pageChangedByUserRef.current = true;
-    setPage(next);
-  }, []);
+  function selectCategory(category: string) {
+    setSelectedCategory(category);
+    // Move focus to the results heading so VO lands on the new context.
+    requestAnimationFrame(() => headingRef.current?.focus());
+  }
 
-  const togglePlatform = useCallback((platform: string) => {
-    setPage(1);
-    setSelectedPlatforms((current) =>
+  function openFilter() {
+    setPendingSearch(search);
+    setPendingPlatforms(activePlatforms);
+    setFilterOpen(true);
+  }
+
+  function applyFilter() {
+    setSearch(pendingSearch);
+    setActivePlatforms(pendingPlatforms);
+    setFilterOpen(false);
+    requestAnimationFrame(() => headingRef.current?.focus());
+  }
+
+  function togglePendingPlatform(platform: string) {
+    setPendingPlatforms((current) =>
       current.includes(platform)
         ? current.filter((value) => value !== platform)
         : [...current, platform]
     );
-  }, []);
+  }
 
-  const clearAll = useCallback(() => {
-    setQuery("");
-    setSelectedPlatforms([]);
-    setSelectedCategory("");
-    setPage(1);
-  }, []);
-
-  const activeFilters = [
-    ...selectedPlatforms.map((platform) => ({
-      key: `platform:${platform}`,
-      label: `Platform: ${platform}`,
-      remove: () => togglePlatform(platform)
-    })),
-    ...(selectedCategory
-      ? [
-          {
-            key: `category:${selectedCategory}`,
-            label: `Category: ${selectedCategory}`,
-            remove: () => {
-              setPage(1);
-              setSelectedCategory("");
-            }
-          }
-        ]
-      : []),
-    ...(query.trim()
-      ? [
-          {
-            key: "search",
-            label: `Search: ${query.trim()}`,
-            remove: () => {
-              setPage(1);
-              setQuery("");
-            }
-          }
-        ]
-      : [])
+  const categoryOptions = [
+    { value: "", label: "All apps", count: entries.length },
+    ...categories.map((category) => ({
+      value: category,
+      label: category,
+      count: categoryCounts.get(category) ?? 0
+    }))
   ];
-
-  const pageWindow = useMemo(() => {
-    const windowSize = 2;
-    const start = Math.max(1, safePage - windowSize);
-    const end = Math.min(totalPages, safePage + windowSize);
-    const list: number[] = [];
-    for (let p = start; p <= end; p += 1) list.push(p);
-    return list;
-  }, [safePage, totalPages]);
 
   return (
     <div className="space-y-6">
-      <p className="sr-only">
-        <a href="#directory-results-heading">Skip to results</a>
+      <p role="status" aria-live="polite" className="sr-only">
+        {announcement}
       </p>
 
-      <div className="grid gap-6 md:grid-cols-[18rem_1fr]">
-        <form
-          role="search"
-          method="get"
-          action={pathname}
-          onSubmit={(event) => event.preventDefault()}
-          className="space-y-5 rounded-lg border border-border p-4"
-          aria-label="Filter the app directory"
-        >
-          <div>
-            <label
-              htmlFor="directory-search"
-              className="block text-sm font-medium"
-            >
-              Search apps by name
-            </label>
-            <div className="mt-1 flex">
-              <span className="inline-flex items-center rounded-l-md border border-r-0 border-input px-2 text-muted-foreground">
-                <Search className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <input
-                id="directory-search"
-                name="q"
-                type="search"
-                value={query}
-                autoComplete="off"
-                onChange={(event) => {
-                  setPage(1);
-                  setQuery(event.target.value);
-                }}
-                className="w-full rounded-r-md border border-input px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf]"
-                placeholder="e.g. Voice Dream"
-              />
-            </div>
-          </div>
-
-          {platformFacets.length > 0 ? (
-            <fieldset className="border-0 p-0">
-              <legend className="text-sm font-medium">
-                Filter by platform
-              </legend>
-              <ul className="mt-2 space-y-1">
-                {platformFacets.map((platform) => (
-                  <li key={platform}>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        name="platform"
-                        value={platform}
-                        checked={selectedPlatforms.includes(platform)}
-                        onChange={() => togglePlatform(platform)}
-                        className="h-4 w-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf]"
-                      />
-                      {platform}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </fieldset>
-          ) : null}
-
-          {categoryFacets.length > 0 ? (
-            <div>
-              <label
-                htmlFor="directory-category"
-                className="block text-sm font-medium"
-              >
-                Filter by category
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <fieldset className="min-w-0">
+          <legend className="mb-2 text-lg font-semibold text-[#222222]">
+            Categories
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            {categoryOptions.map((option) => (
+              <label key={option.value || "all"} className="cursor-pointer">
+                <input
+                  type="radio"
+                  name="directory-category"
+                  value={option.value}
+                  checked={selectedCategory === option.value}
+                  onChange={() => selectCategory(option.value)}
+                  className="peer sr-only"
+                />
+                <span className="inline-flex items-center rounded-full border border-[#767676] px-3 py-1.5 text-sm font-medium text-[#222222] hover:bg-muted peer-checked:border-[#0066bf] peer-checked:bg-[#0066bf] peer-checked:text-white peer-checked:before:mr-1 peer-checked:before:content-['✓'] peer-checked:hover:bg-[#035a9e] peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2">
+                  {option.label}
+                  <span aria-hidden="true">&nbsp;({option.count})</span>
+                  <span className="sr-only">
+                    , {option.count} app{option.count === 1 ? "" : "s"}
+                  </span>
+                </span>
               </label>
-              <select
-                id="directory-category"
-                name="category"
-                value={selectedCategory}
-                onChange={(event) => {
-                  setPage(1);
-                  setSelectedCategory(event.target.value);
-                }}
-                className="mt-1 w-full rounded-md border border-input px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf]"
-              >
-                <option value="">All categories</option>
-                {categoryFacets.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
+            ))}
+          </div>
+        </fieldset>
 
-          {activeFilters.length > 0 ? (
-            <button
-              type="button"
-              onClick={clearAll}
-              className="text-sm font-medium text-[#0f6cba] underline underline-offset-2 hover:text-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf] rounded"
-            >
-              Clear all filters
-            </button>
-          ) : null}
-        </form>
-
-        <div>
-          {activeFilters.length > 0 ? (
+        <button
+          ref={filterButtonRef}
+          type="button"
+          onClick={openFilter}
+          aria-haspopup="dialog"
+          className="inline-flex shrink-0 items-center gap-2 rounded-md border border-[#767676] px-4 py-2 text-sm font-semibold text-[#222222] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <Filter className="h-4 w-4" aria-hidden="true" />
+          Filter
+          {activeFilterCount > 0 ? (
             <>
-              <h3 className="sr-only">Active filters</h3>
-              <ul className="mb-4 flex flex-wrap gap-2">
-                {activeFilters.map((filter) => (
-                  <li key={filter.key}>
-                    <button
-                      type="button"
-                      onClick={filter.remove}
-                      className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf]"
-                    >
-                      {filter.label}
-                      <X className="h-3 w-3" aria-hidden="true" />
-                      <span className="sr-only">
-                        {" "}
-                        — remove this filter
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <span className="sr-only">, {activeFilterCount} active</span>
+              <span
+                aria-hidden="true"
+                className="rounded-full bg-[#0066bf] px-1.5 text-xs font-bold text-white"
+              >
+                {activeFilterCount}
+              </span>
             </>
           ) : null}
+        </button>
+      </div>
 
-          <h3
+      <section aria-labelledby="directory-results-heading">
+        <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+          <h2
             id="directory-results-heading"
-            ref={resultsHeadingRef}
+            ref={headingRef}
             tabIndex={-1}
-            className="text-xl font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0066bf] rounded"
+            className="text-2xl font-semibold text-[#222222] focus:outline-none"
           >
-            {filtered.length} {filtered.length === 1 ? "app" : "apps"}
-          </h3>
-
-          <p role="status" aria-live="polite" className="sr-only">
-            {liveMessage}
+            {headingText}
+          </h2>
+          <p className="text-sm text-[#595959]">
+            {visible.length} app{visible.length === 1 ? "" : "s"}
+            {!hasActiveFilter && entries.length > DEFAULT_RECENT
+              ? ` (most recent of ${entries.length})`
+              : ""}
           </p>
+        </div>
 
-          {filtered.length === 0 ? (
-            <p className="mt-4 text-foreground">
-              No apps match your search and filters. Try removing a filter or
-              clearing your search.
+        {visible.length === 0 ? (
+          <div className="rounded-lg border border-[#767676] bg-white p-8 text-center">
+            <h3 className="text-lg font-semibold text-[#222222]">
+              No apps found
+            </h3>
+            <p className="mt-1 text-[#595959]">
+              Try a different category or adjust your filters.
             </p>
-          ) : (
-            <ul className="mt-4 grid gap-4 md:grid-cols-2">
-              {visible.map((entry) => (
-                <li key={entry.id}>
-                  <article
-                    aria-labelledby={`directory-app-${entry.id}`}
-                    className="h-full overflow-hidden rounded-lg border border-border bg-white"
-                  >
+          </div>
+        ) : (
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {visible.map((entry) => {
+              const href = entry.appStoreUrl || entry.websiteUrl || null;
+              return (
+                <li key={`${entry.id}-${entry.slug}`}>
+                  <article className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-white shadow-wordpress">
                     <BrandedMediaFrame
                       src={entry.iconUrl}
                       alt=""
                       decorative
-                      className="aspect-[16/9]"
+                      className="aspect-[16/10]"
                       fallbackLabel="App Directory"
                     />
-                    <div className="p-4">
-                      <h4
-                        id={`directory-app-${entry.id}`}
-                        className="text-lg font-semibold"
-                      >
-                        {entry.appName}
-                      </h4>
+                    <div className="flex flex-1 flex-col p-4">
+                      <h3 className="text-lg font-semibold">
+                        {href ? (
+                          <a
+                            href={href}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                            className="text-[#0f6cba] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            {entry.appName}
+                            <span className="sr-only"> (opens in a new tab)</span>
+                          </a>
+                        ) : (
+                          entry.appName
+                        )}
+                      </h3>
                       {entry.platforms.length > 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          {entry.platforms.join(", ")}
+                        <p className="mt-1 text-xs font-medium uppercase text-[#595959]">
+                          {entry.platforms.join(" · ")}
                         </p>
                       ) : null}
                       {entry.description ? (
-                        <p className="mt-2 text-sm">{entry.description}</p>
+                        <p className="mt-2 text-sm text-[#595959]">
+                          {entry.description}
+                        </p>
                       ) : null}
-                      <div className="mt-3 flex flex-wrap gap-4 text-sm">
-                        {entry.appStoreUrl ? (
-                          <a
-                            href={entry.appStoreUrl}
-                            className={linkClass}
-                            rel="noopener noreferrer"
-                          >
-                            App Store
-                            <span className="sr-only"> for {entry.appName}</span>
-                            <ExternalLink
-                              className="h-3.5 w-3.5"
-                              aria-hidden="true"
-                            />
-                          </a>
-                        ) : null}
-                        {entry.websiteUrl ? (
-                          <a
-                            href={entry.websiteUrl}
-                            className={linkClass}
-                            rel="noopener noreferrer"
-                          >
-                            Developer website
-                            <span className="sr-only"> for {entry.appName}</span>
-                            <ExternalLink
-                              className="h-3.5 w-3.5"
-                              aria-hidden="true"
-                            />
-                          </a>
-                        ) : null}
-                      </div>
                     </div>
                   </article>
                 </li>
-              ))}
-            </ul>
-          )}
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
-          {totalPages > 1 ? (
-            <nav aria-label="App directory pages" className="mt-8">
-              <ul className="flex flex-wrap items-center justify-center gap-2">
-                <li>
-                  {safePage > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => goToPage(safePage - 1)}
-                      className={pageLinkClass}
-                    >
-                      <span aria-hidden="true">&larr;</span> Previous
-                      <span className="sr-only"> page</span>
-                    </button>
-                  ) : (
-                    <span className={pageDisabledClass} aria-hidden="true">
-                      <span>&larr;</span> Previous
-                    </span>
-                  )}
-                </li>
+      <Modal
+        isOpen={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        title="Filter apps"
+        description="Search by name and narrow by platform, then apply."
+        triggerRef={filterButtonRef}
+      >
+        <div className="space-y-5">
+          <div>
+            <label
+              htmlFor="directory-filter-search"
+              className="block text-sm font-semibold"
+            >
+              Search apps
+            </label>
+            <input
+              id="directory-filter-search"
+              type="search"
+              value={pendingSearch}
+              onChange={(event) => setPendingSearch(event.target.value)}
+              placeholder="App name or description"
+              className="mt-1 w-full rounded-md border border-[#767676] bg-white px-3 py-2 text-[#222222] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
+          </div>
 
-                {pageWindow[0] > 1 ? (
-                  <li aria-hidden="true" className="px-1 text-[#595959]">
-                    &hellip;
-                  </li>
-                ) : null}
-
-                {pageWindow.map((p) =>
-                  p === safePage ? (
-                    <li key={p}>
-                      <span
-                        className={pageCurrentClass}
-                        aria-current="page"
-                        aria-label={`Page ${p}, current page`}
-                      >
-                        {p}
-                      </span>
-                    </li>
-                  ) : (
-                    <li key={p}>
-                      <button
-                        type="button"
-                        onClick={() => goToPage(p)}
-                        className={pageLinkClass}
-                        aria-label={`Go to page ${p}`}
-                      >
-                        {p}
-                      </button>
-                    </li>
-                  )
-                )}
-
-                {pageWindow[pageWindow.length - 1] < totalPages ? (
-                  <li aria-hidden="true" className="px-1 text-[#595959]">
-                    &hellip;
-                  </li>
-                ) : null}
-
-                <li>
-                  {safePage < totalPages ? (
-                    <button
-                      type="button"
-                      onClick={() => goToPage(safePage + 1)}
-                      className={pageLinkClass}
-                    >
-                      Next<span className="sr-only"> page</span>{" "}
-                      <span aria-hidden="true">&rarr;</span>
-                    </button>
-                  ) : (
-                    <span className={pageDisabledClass} aria-hidden="true">
-                      Next <span>&rarr;</span>
-                    </span>
-                  )}
-                </li>
-              </ul>
-            </nav>
+          {platforms.length > 0 ? (
+            <fieldset>
+              <legend className="text-sm font-semibold">Platforms</legend>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {platforms.map((platform) => (
+                  <label
+                    key={platform}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={pendingPlatforms.includes(platform)}
+                      onChange={() => togglePendingPlatform(platform)}
+                      className="h-4 w-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                    {platform}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           ) : null}
         </div>
-      </div>
+
+        <ModalActions>
+          <ModalButton
+            variant="secondary"
+            onClick={() => {
+              setPendingSearch("");
+              setPendingPlatforms([]);
+            }}
+          >
+            Clear
+          </ModalButton>
+          <ModalButton variant="primary" onClick={applyFilter}>
+            Apply filters
+          </ModalButton>
+        </ModalActions>
+      </Modal>
     </div>
   );
 }

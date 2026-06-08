@@ -7,6 +7,7 @@ import {
   getLatestPosts
 } from "@/lib/content/wordpress";
 import { durationSpoken, formatDate, formatDuration } from "@/lib/utils";
+import { PODCASTS_PUBLIC_ENABLED } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +78,7 @@ export default async function HomePage() {
             viewAllLabel="View all posts"
           />
 
-          {episodes.length > 0 ? (
+          {PODCASTS_PUBLIC_ENABLED && episodes.length > 0 ? (
             <section>
               <h2 className="mb-4 text-2xl font-semibold">
                 Latest iACast Episodes

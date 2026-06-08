@@ -2,6 +2,60 @@
 
 Last updated: 2026-06-07
 
+## Session 2026-06-07 (PM): admin rebuild, emails, directory
+
+Big build session driven by Taylor's VoiceOver testing. Detailed per-item status
+lives in `ADMIN_FEEDBACK.md` (source of truth). Guiding preference: mirror the
+**Start-testing** project and strip WordPress-style verbosity. Every UI change
+was accessibility-lead reviewed; every commit is `tsc` + `next build` verified
+and pushed to `main` (DO App Platform auto-deploys). Note: the admin is
+auth-gated and could not be self-tested — Taylor tests after each deploy.
+
+Shipped this session (commit → area):
+- Ported Start-testing UI primitives, re-themed to the light tokens: `badge`,
+  `empty-state`, `error-alert`, `modal`, `tabs`, `breadcrumb`,
+  `toast`/`toaster` + `use-toast` hook; `item-table` upgraded to parity (skip
+  links, loading, srOnly/width). Darkened `--border`/`--input` 0 0% 80% → 46%.
+- Admin chrome: removed "Signed in as…" bar, "Social links" aria-label, helper
+  text, WhatsApp link; renames ("Recent users"→"All users", "Review
+  queue"→"Pending review"); dashboard dl breakdown + Quick actions grid.
+- Editor (custom block editor, NOT BlockNote): autofocus Title; Title Enter →
+  body block (fixed accidental form submit); beforeunload unsaved warning;
+  per-block controls collapsed behind one `<details>` "Block actions"; Cmd/Ctrl+A
+  two-step select-all-blocks + Delete-to-clear + Cmd/Ctrl+Z undo; live "Show
+  preview" pane via `blocksToHtml`; command-palette trigger cleaned up.
+- Posts: Unpublish (→draft) + Delete (hard, confirm Modal) row actions.
+- Users: client search + pagination + `/admin/users/[id]` profile pages.
+- New admin sections: `/admin/podcasts` (searchable episode catalogue),
+  `/admin/media` (media library — list, edit alt, copy URL, delete).
+- Submit menu: apps + blog post (/report) + podcast (/iacast-network).
+- Email: `notifyAdminSubmission`/`notifyAdminNewUser` now fan out to EVERY
+  moderator + admin user (BTG pattern, deduped, REVIEW_NOTIFICATION_EMAIL
+  fallback); submitter "received" email already wired in all 3 submission
+  routes. SES env IS configured in the DO app, so email sends end-to-end.
+
+Known gaps / deferred: audio/podcast submissions have no review/decision flow or
+decision email (intake + confirmation only); post "trash" is hard delete (no
+restorable soft-trash — needs a migration); live preview is below the editor,
+not a side pane. Accessibility Nutrition Labels: only available via the App Store
+Connect API for your OWN apps (auth'd) — NOT fetchable for third-party directory
+apps; the public iTunes API doesn't expose them.
+
+App Directory redesigned: categories radio group ("Filter by category", counts
+in the accessible name) + a "Filter" button opening the ported `Modal` (staged
+search/platform → Apply, the Start-testing filter-modal pattern) + the homepage
+card grid as `<ul>/<li>` with app-name links (new tab); default = 10 most recent
+(id desc), category click loads that category with a polite live announcement;
+focus moves to the results `<h2>` on category select but stays in search during
+typing. Dropped the old platform-checkbox column + URL-param pagination.
+
+Public podcasts DISABLED (2026-06-07): media-host enclosure URLs return
+AccessDenied (won't play) pending migration to Michael's Pinecast feed. Gated
+behind `src/lib/flags.ts` → `PODCASTS_PUBLIC_ENABLED = false`; hides the homepage
+"Latest iACast Episodes" section and the `/iacast-network` PodcastBrowser (shows
+a "temporarily unavailable" note). Audio submission form + admin /admin/podcasts
+are unaffected. Flip the flag back to `true` once the Pinecast feed is wired.
+
 ## Admin feedback backlog (2026-06-07)
 
 Taylor ran a VoiceOver test pass over the admin + editor. Full backlog with
