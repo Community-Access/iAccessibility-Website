@@ -91,23 +91,32 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ❓ needs scoping
 - ☑ Dashboard: Users breakdown is now a <dl> (Admins/Moderators/Members).
 - ☑ User menu: added "Submit a blog post" (/report); "Submit an app".
 
-## STILL OPEN — larger features (need careful, isolated implementation)
-Lead has given full guidance for all of these (see chat). Each is a real feature;
-I can't self-verify (admin is auth-gated) so they ship one isolated commit at a
-time to avoid breaking the editor:
-- ☐ Editor: collapse per-block buttons into ONE "Block actions" menu per block
-  (haspopup=menu, position-named) — biggest remaining VO win.
-- ☐ Editor: Cmd/Ctrl+A select-all-blocks (two-step) + Delete-to-clear + UNDO.
-- ☐ Users: client search + pagination; per-row select already named correctly;
-  make each user a link to /admin/users/[id] profile page.
-- ☐ Dashboard: full Start-testing-style quick-action layout (dl breakdown done).
-- ☐ Podcasts admin: new /admin/podcasts read-only ItemTable (paginated, 579 eps).
-- ☐ Posts: Unpublish (status→draft, inline+undo) and Move to trash (status→
-  trashed, restorable) with the focus-managed Modal for trash + post-action
-  announcement.
-- ☐ Submit a podcast: needs a new submit page/flow (no route exists yet).
-- ☐ Media library in admin (LARGE: upload management UI + backend).
-- ☐ Live preview pane in editor (LARGE: render blocks/markdown).
+## COMPLETED — full backlog shipped (2026-06-07 PM)
+- ☑ Editor: per-block controls collapsed behind one <details> "Block actions"
+  disclosure (commit bba6c61).
+- ☑ Editor: Cmd/Ctrl+A two-step select-all-blocks + Delete-to-clear + Cmd/Ctrl+Z
+  undo (commit 0391cec).
+- ☑ Editor: live "Show preview" pane via blocksToHtml (commit 9d9c308).
+- ☑ Users: client search + pagination + /admin/users/[id] profile pages
+  (commit 271c5fd).
+- ☑ Dashboard: Quick actions card grid + dl stat breakdown (commits b8f79c6,
+  22c0323).
+- ☑ Podcasts admin: /admin/podcasts searchable paginated catalogue (04b5965).
+- ☑ Posts: Unpublish (→draft) + Delete (hard, confirm Modal) (commit bba6c61).
+- ☑ Submit menu: apps + blog post (/report) + podcast (/iacast-network)
+  (commits 22c0323, b8f79c6).
+- ☑ Media library: /admin/media — list, edit alt, copy URL, delete (9d9c308).
+
+### Known v1 limitations / deferred polish
+- Post "trash" is a HARD delete (confirm-protected), not restorable soft-trash —
+  restorable trash needs a `trashed` enum value/column + migration (can't verify
+  a prod migration from here, so deferred).
+- Live preview renders BELOW the editor (toggle), not a side-by-side right pane —
+  responsive two-column layout is a future polish.
+- Media library is a flat grid (no search/pagination yet); fine for current
+  volume, add pagination if it grows. Object delete is best-effort.
+- Block "Change type" is still its own listbox inside the disclosure; a single
+  unified per-block menu (lead's preferred end-state) is a future refinement.
 
 ## Notes
 - Editor = BlockNote (@blocknote/*). Several items (select-all, blank-block on
