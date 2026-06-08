@@ -25,17 +25,6 @@ async function totalUserCount() {
   return row?.value ?? 0;
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-lg border border-[#767676] bg-white p-4 shadow-wordpress">
-      <p className="text-sm font-semibold uppercase text-[#595959]">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-[#222222]">
-        {value.toLocaleString()}
-      </p>
-    </div>
-  );
-}
-
 export default async function AdminUsersPage() {
   const currentUser = await getCurrentAppUser();
   if (!canAdmin(currentUser?.role)) redirect("/admin");
@@ -71,16 +60,15 @@ export default async function AdminUsersPage() {
     <div className="space-y-8">
       <div className="wp-article">
         <h1 className="text-3xl font-bold">Users</h1>
-      </div>
-
-      <div>
-        <h2 className="mb-4 text-2xl font-semibold">User counts</h2>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Stat label="Total users" value={totalUsers} />
-          <Stat label="Admins" value={adminUsers} />
-          <Stat label="Moderators" value={moderatorUsers} />
-          <Stat label="Members" value={memberUsers} />
-        </div>
+        <p className="mt-3 text-[#595959]">
+          {totalUsers.toLocaleString()} total user
+          {totalUsers === 1 ? "" : "s"}: {adminUsers.toLocaleString()} admin
+          {adminUsers === 1 ? "" : "s"},{" "}
+          {moderatorUsers.toLocaleString()} moderator
+          {moderatorUsers === 1 ? "" : "s"}, and{" "}
+          {memberUsers.toLocaleString()} member
+          {memberUsers === 1 ? "" : "s"}.
+        </p>
       </div>
 
       <div className="wp-article">

@@ -1,6 +1,17 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { count, eq } from "drizzle-orm";
+import {
+  Bell,
+  FileText,
+  FolderOpen,
+  Image,
+  Inbox,
+  PenLine,
+  Podcast,
+  Send,
+  Users as UsersIcon
+} from "lucide-react";
 import { db, hasDatabase } from "@/db";
 import {
   blogPosts,
@@ -61,47 +72,130 @@ async function directoryStatusCount(
   return row?.value ?? 0;
 }
 
-function DashboardStat({
-  label,
+const gradientStyles = {
+  purpleBlue: ["rgba(110, 57, 170, 1)", "rgba(64, 100, 178, 1)"],
+  orangeYellow: ["rgba(180, 110, 20, 1)", "rgba(185, 70, 35, 1)"],
+  cyanBlue: ["rgba(30, 130, 160, 1)", "rgba(20, 82, 175, 1)"],
+  green: ["rgba(4, 145, 92, 1)", "rgba(0, 105, 68, 1)"],
+  pinkPurple: ["rgba(180, 52, 118, 1)", "rgba(115, 66, 174, 1)"],
+  orangePink: ["rgba(180, 100, 36, 1)", "rgba(158, 40, 88, 1)"],
+  purpleCyan: ["rgba(84, 61, 168, 1)", "rgba(43, 130, 172, 1)"],
+  chartGreen: ["rgba(30, 136, 75, 1)", "rgba(0, 90, 50, 1)"],
+  blue: ["rgba(32, 100, 176, 1)", "rgba(18, 38, 165, 1)"]
+};
+
+function plural(value: number, singular: string, pluralLabel = `${singular}s`) {
+  return `${value.toLocaleString()} ${value === 1 ? singular : pluralLabel}`;
+}
+
+function DashboardCard({
+  title,
   value,
   detail,
-  href
+  href,
+  icon: Icon,
+  gradient
 }: {
-  label: string;
+  title: string;
   value: number;
   detail: ReactNode;
+  icon: typeof UsersIcon;
+  gradient: string[];
   href?: string;
 }) {
   const content = (
     <>
-      <span className="text-sm font-semibold uppercase text-[#595959]">
-        {label}
-      </span>
-      <span className="mt-3 block text-3xl font-bold text-[#222222]">
+      <div className="flex items-center gap-2">
+        <Icon className="h-5 w-5 text-white" aria-hidden="true" />
+        <span className="text-base font-semibold leading-tight text-white">
+          {title}
+        </span>
+      </div>
+      <span className="mt-3 block text-3xl font-bold text-white">
         {value.toLocaleString()}
       </span>
-      <div className="mt-1 text-sm text-[#595959]">{detail}</div>
+      <div className="mt-1 text-sm text-white/90">{detail}</div>
     </>
+  );
+
+  const className =
+    "relative block min-h-[116px] overflow-hidden p-4 no-underline shadow-wordpress transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2";
+  const style = {
+    background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
+    borderRadius: "16px",
+    boxShadow: "0 6px 10px rgba(0, 0, 0, 0.25)"
+  };
+  const borderOverlay = (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0"
+      style={{
+        borderRadius: "16px",
+        border: "1px solid rgba(255, 255, 255, 0.18)"
+      }}
+    />
   );
 
   if (href) {
     return (
       <Link
         href={href}
-        className="block rounded-lg border border-[#767676] bg-white p-5 no-underline shadow-wordpress hover:border-[#0f6cba] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+        className={className}
+        style={style}
       >
+        {borderOverlay}
         {content}
-        <span className="mt-3 block text-sm font-semibold text-[#0f6cba] underline">
-          Open {label.toLowerCase()}
-        </span>
       </Link>
     );
   }
 
   return (
-    <div className="rounded-lg border border-[#767676] bg-white p-5 shadow-wordpress">
+    <div className={className} style={style}>
+      {borderOverlay}
       {content}
     </div>
+  );
+}
+
+function QuickActionCard({
+  href,
+  title,
+  detail,
+  icon: Icon,
+  gradient
+}: {
+  href: string;
+  title: string;
+  detail: string;
+  icon: typeof UsersIcon;
+  gradient: string[];
+}) {
+  return (
+    <Link
+      href={href}
+      className="relative block min-h-[104px] overflow-hidden p-4 no-underline shadow-wordpress transition-transform hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+      style={{
+        background: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})`,
+        borderRadius: "16px",
+        boxShadow: "0 6px 10px rgba(0, 0, 0, 0.25)"
+      }}
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          borderRadius: "16px",
+          border: "1px solid rgba(255, 255, 255, 0.18)"
+        }}
+      />
+      <span className="flex items-center gap-2">
+        <Icon className="h-5 w-5 text-white" aria-hidden="true" />
+        <span className="text-base font-semibold leading-tight text-white">
+          {title}
+        </span>
+      </span>
+      <span className="mt-2 block text-sm text-white/90">{detail}</span>
+    </Link>
   );
 }
 
@@ -146,42 +240,41 @@ export default async function AdminDashboard() {
       <div>
         <h2 className="mb-4 text-2xl font-semibold">Overview</h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <DashboardStat
-            label="Users"
+          <DashboardCard
+            title="Users"
             value={totalUsers}
+            icon={UsersIcon}
+            gradient={gradientStyles.purpleBlue}
             detail={
-              <dl className="grid grid-cols-[1fr_auto] gap-x-3">
-                <dt>Admins</dt>
-                <dd className="text-right font-medium text-[#222222]">
-                  {adminUsers}
-                </dd>
-                <dt>Moderators</dt>
-                <dd className="text-right font-medium text-[#222222]">
-                  {moderatorUsers}
-                </dd>
-                <dt>Members</dt>
-                <dd className="text-right font-medium text-[#222222]">
-                  {memberUsers}
-                </dd>
-              </dl>
+              <>
+                {plural(adminUsers, "admin")},{" "}
+                {plural(moderatorUsers, "moderator")},{" "}
+                {plural(memberUsers, "member")}
+              </>
             }
             href={isAdmin ? "/admin/users" : undefined}
           />
-          <DashboardStat
-            label="Pending review"
+          <DashboardCard
+            title="Pending review"
             value={pendingTotal}
+            icon={Inbox}
+            gradient={gradientStyles.orangePink}
             detail={`${pendingPosts} report posts, ${pendingDirectory} directory entries`}
             href="/admin/review"
           />
-          <DashboardStat
-            label="Published posts"
+          <DashboardCard
+            title="Published posts"
             value={publishedPosts}
+            icon={FileText}
+            gradient={gradientStyles.green}
             detail={`${totalPosts} posts total`}
             href={isAdmin ? "/admin/posts" : undefined}
           />
-          <DashboardStat
-            label="Directory apps"
+          <DashboardCard
+            title="Directory apps"
             value={approvedDirectory}
+            icon={FolderOpen}
+            gradient={gradientStyles.cyanBlue}
             detail="Approved directory entries"
           />
         </div>
@@ -190,23 +283,66 @@ export default async function AdminDashboard() {
       {isAdmin ? (
         <div>
           <h2 className="mb-4 text-2xl font-semibold">Quick actions</h2>
-          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {[
-              { href: "/admin/posts/new", label: "Write a new post" },
-              { href: "/admin/posts", label: "Manage posts" },
-              { href: "/admin/media", label: "Media library" },
-              { href: "/admin/podcasts", label: "Browse podcasts" },
-              { href: "/admin/review", label: "Open pending review" },
-              { href: "/admin/users", label: "Manage users" },
-              { href: "/app-directory/submit", label: "Submit an app" }
+              {
+                href: "/admin/posts/new",
+                label: "Write a new post",
+                detail: "Draft and publish site updates",
+                icon: PenLine,
+                gradient: gradientStyles.purpleBlue
+              },
+              {
+                href: "/admin/posts",
+                label: "Manage posts",
+                detail: "Edit drafts and published articles",
+                icon: FileText,
+                gradient: gradientStyles.blue
+              },
+              {
+                href: "/admin/media",
+                label: "Media library",
+                detail: "Upload and manage images",
+                icon: Image,
+                gradient: gradientStyles.pinkPurple
+              },
+              {
+                href: "/admin/podcasts",
+                label: "Browse podcasts",
+                detail: "Review imported iACast episodes",
+                icon: Podcast,
+                gradient: gradientStyles.orangeYellow
+              },
+              {
+                href: "/admin/review",
+                label: "Pending review",
+                detail: "Approve submitted content",
+                icon: Bell,
+                gradient: gradientStyles.orangePink
+              },
+              {
+                href: "/admin/users",
+                label: "Manage users",
+                detail: "Review roles and accounts",
+                icon: UsersIcon,
+                gradient: gradientStyles.cyanBlue
+              },
+              {
+                href: "/app-directory/submit",
+                label: "Submit an app",
+                detail: "Add a directory entry",
+                icon: Send,
+                gradient: gradientStyles.chartGreen
+              }
             ].map((action) => (
               <li key={action.href}>
-                <Link
+                <QuickActionCard
                   href={action.href}
-                  className="block rounded-lg border border-[#767676] bg-white p-4 font-semibold text-[#0f6cba] no-underline shadow-wordpress hover:border-[#0f6cba] hover:bg-[#eef3f8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  {action.label}
-                </Link>
+                  title={action.label}
+                  detail={action.detail}
+                  icon={action.icon}
+                  gradient={action.gradient}
+                />
               </li>
             ))}
           </ul>

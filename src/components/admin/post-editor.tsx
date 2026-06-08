@@ -460,7 +460,6 @@ export default function PostEditor({
 
   const [title, setTitle] = useState("");
   const [blocks, setBlocks] = useState<EditorBlock[]>(() => [createBlock()]);
-  const initialFocusBlockIdRef = useRef(blocks[0]?.id ?? null);
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [featuredUrl, setFeaturedUrl] = useState("");
   const [featuredAlt, setFeaturedAlt] = useState("");
@@ -477,6 +476,7 @@ export default function PostEditor({
   const [invalidTarget, setInvalidTarget] = useState<InvalidTarget>(null);
   const [openMenuBlockId, setOpenMenuBlockId] = useState<string | null>(null);
   const [activeBlockTypeIndex, setActiveBlockTypeIndex] = useState(0);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [allBlocksSelected, setAllBlocksSelected] = useState(false);
   const clearSnapshotRef = useRef<EditorBlock[] | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -496,15 +496,6 @@ export default function PostEditor({
     Math.max(filteredCommands.length - 1, 0)
   );
   const activeCommand = filteredCommands[safeActiveCommandIndex];
-
-  useEffect(() => {
-    window.setTimeout(() => {
-      const blockId = initialFocusBlockIdRef.current;
-      if (blockId) {
-        blockRefs.current[blockId]?.focus();
-      }
-    }, 0);
-  }, []);
 
   useEffect(() => {
     if (!commandOpen || !commandDialogRef.current) return;
@@ -676,6 +667,8 @@ export default function PostEditor({
   }
 
   function removeBlock(blockId: string) {
+    setSelectedBlockId(null);
+    setAllBlocksSelected(false);
     setBlocks((current) => {
       if (current.length === 1) {
         announce("The only block was cleared.");
@@ -843,6 +836,7 @@ export default function PostEditor({
     clearSnapshotRef.current = blocks;
     const fresh = createBlock();
     setBlocks([fresh]);
+    setSelectedBlockId(null);
     setAllBlocksSelected(false);
     setFocusedBlockId(fresh.id);
     focusBlock(fresh.id, "start");
@@ -856,6 +850,7 @@ export default function PostEditor({
     block: EditorBlock
   ) {
     const mod = event.metaKey || event.ctrlKey;
+    const blockIndex = blocks.findIndex((item) => item.id === block.id);
 
     // Undo a just-cleared "select all + delete" — only while the editor is
     // still the single empty block we created (so typed content isn't clobbered).
@@ -878,6 +873,21 @@ export default function PostEditor({
       return;
     }
 
+    if (selectedBlockId === block.id) {
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        removeBlock(block.id);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSelectedBlockId(null);
+        announce("Block selection cleared.");
+        return;
+      }
+      if (!mod) setSelectedBlockId(null);
+    }
+
     if (allBlocksSelected) {
       if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
@@ -895,19 +905,21 @@ export default function PostEditor({
       if (!mod) setAllBlocksSelected(false);
     }
 
-    // Two-step Cmd/Ctrl+A: the first press lets the browser select this field's
-    // text; once the field is already fully selected (or empty), a second press
-    // escalates to selecting ALL blocks (visible outline + announcement).
+    // Two-step Cmd/Ctrl+A: first selects the current block, second selects the
+    // whole editor canvas for deletion.
     if (mod && event.key.toLowerCase() === "a") {
-      const ta = event.currentTarget;
-      const fullySelected =
-        ta.value.length === 0 ||
-        (ta.selectionStart === 0 && ta.selectionEnd === ta.value.length);
-      if (fullySelected) {
-        event.preventDefault();
+      event.preventDefault();
+      if (selectedBlockId === block.id) {
+        setSelectedBlockId(null);
         setAllBlocksSelected(true);
         announce(
           `All ${blocks.length} block${blocks.length === 1 ? "" : "s"} selected. Press Delete to clear, or Escape to cancel.`
+        );
+      } else {
+        setSelectedBlockId(block.id);
+        setAllBlocksSelected(false);
+        announce(
+          `${blockLabel(block)} block ${blockIndex + 1} selected. Press Delete to remove it, or press ${event.metaKey ? "Command" : "Control"} A again to select all blocks.`
         );
       }
       return;
@@ -916,6 +928,26 @@ export default function PostEditor({
     if (event.key === "/" && event.currentTarget.selectionStart === 0) {
       event.preventDefault();
       openBlockMenu(block.id);
+      return;
+    }
+
+    if (
+      event.key === "Backspace" &&
+      !event.shiftKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      block.type === "paragraph" &&
+      event.currentTarget.value.length === 0 &&
+      event.currentTarget.selectionStart === 0 &&
+      event.currentTarget.selectionEnd === 0
+    ) {
+      event.preventDefault();
+      if (blocks.length > 1) {
+        removeBlock(block.id);
+      } else {
+        announce("The empty paragraph block is the only body block.");
+      }
       return;
     }
 
@@ -939,20 +971,19 @@ export default function PostEditor({
 
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
 
-    const index = blocks.findIndex((item) => item.id === block.id);
     const target = event.currentTarget;
     const atStart = target.selectionStart === 0 && target.selectionEnd === 0;
     const atEnd =
       target.selectionStart === target.value.length &&
       target.selectionEnd === target.value.length;
 
-    if (event.key === "ArrowUp" && atStart && index > 0) {
+    if (event.key === "ArrowUp" && atStart && blockIndex > 0) {
       event.preventDefault();
-      focusBlock(blocks[index - 1].id, "end");
+      focusBlock(blocks[blockIndex - 1].id, "end");
     }
-    if (event.key === "ArrowDown" && atEnd && index < blocks.length - 1) {
+    if (event.key === "ArrowDown" && atEnd && blockIndex < blocks.length - 1) {
       event.preventDefault();
-      focusBlock(blocks[index + 1].id, "start");
+      focusBlock(blocks[blockIndex + 1].id, "start");
     }
   }
 
@@ -1165,7 +1196,7 @@ export default function PostEditor({
       <div className="wp-article space-y-5">
         <div>
           <label htmlFor={titleId} className="block text-sm font-semibold">
-            Title
+            Title (required)
           </label>
           <input
             id={titleId}
@@ -1239,33 +1270,36 @@ export default function PostEditor({
                 <label htmlFor={altId} className="block text-sm font-semibold">
                   Image description (alt text)
                 </label>
-              <input
-                id={altId}
-                ref={altRef}
-                value={featuredAlt}
-                disabled={featuredDecorative}
-                onChange={(e) => setFeaturedAlt(e.target.value)}
-                aria-invalid={invalidField === "alt" || undefined}
-                aria-describedby={invalidField === "alt" ? errorId : undefined}
+                <input
+                  id={altId}
+                  ref={altRef}
+                  value={featuredAlt}
+                  disabled={featuredDecorative}
+                  onChange={(e) => setFeaturedAlt(e.target.value)}
+                  aria-invalid={invalidField === "alt" || undefined}
+                  aria-describedby={invalidField === "alt" ? errorId : undefined}
                   className="mt-1 w-full rounded-md border border-[#6b6b6b] bg-white px-3 py-2 text-[#222222] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
-                placeholder="Describe what the image shows"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={featuredDecorative}
-                onChange={(event) => {
-                  setFeaturedDecorative(event.target.checked);
-                  if (event.target.checked) {
-                    setFeaturedAlt("");
-                    if (invalidField === "alt") setInvalidField(null);
-                  }
-                }}
-                className="h-4 w-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
-              />
-              This featured image is decorative
-            </label>
+                  placeholder="Describe what the image shows"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={featuredDecorative}
+                  onChange={(event) => {
+                    setFeaturedDecorative(event.target.checked);
+                    if (event.target.checked) {
+                      setFeaturedAlt("");
+                      if (invalidField === "alt") {
+                        setInvalidField(null);
+                        setError("");
+                      }
+                    }
+                  }}
+                  className="h-4 w-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+                />
+                This featured image is decorative
+              </label>
               <button
                 type="button"
                 onClick={removeFeatured}
@@ -1281,14 +1315,14 @@ export default function PostEditor({
       <div className="wp-article">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id={bodyHeadingId} className="text-lg font-semibold">
-            Post body
+            Post body (required)
           </h2>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setShowPreview((value) => !value)}
               aria-expanded={showPreview}
-              aria-controls={`${baseId}-preview`}
+              aria-controls={showPreview ? `${baseId}-preview` : undefined}
               className="rounded-md border border-[#6b6b6b] px-3 py-2 text-sm font-semibold hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
             >
               {showPreview ? "Hide preview" : "Show preview"}
@@ -1297,6 +1331,7 @@ export default function PostEditor({
               type="button"
               onClick={openCommandPalette}
               aria-expanded={commandOpen}
+              aria-haspopup="dialog"
               aria-keyshortcuts="Meta+K Control+K"
               className="inline-flex items-center gap-2 rounded-md border border-[#6b6b6b] px-3 py-2 text-sm font-semibold hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
             >
@@ -1329,11 +1364,12 @@ export default function PostEditor({
             const imageAltId = `${blockId}-image-alt`;
             const captionId = `${blockId}-caption`;
             const blockPosition = `${blockLabel(block).toLowerCase()} block ${index + 1} of ${blocks.length}`;
+            const isCurrentBlockSelected = selectedBlockId === block.id;
             return (
               <div
                 key={block.id}
                 className={`rounded-md border bg-white p-3 ${
-                  allBlocksSelected
+                  allBlocksSelected || isCurrentBlockSelected
                     ? "border-[#0066bf] ring-2 ring-[#0066bf]"
                     : "border-[#6b6b6b]"
                 }`}
@@ -1471,12 +1507,21 @@ export default function PostEditor({
                       <input
                         type="checkbox"
                         checked={Boolean(block.decorative)}
-                        onChange={(event) =>
+                        onChange={(event) => {
                           updateBlock(block.id, {
                             decorative: event.target.checked,
                             alt: event.target.checked ? "" : block.alt
-                          })
-                        }
+                          });
+                          if (
+                            event.target.checked &&
+                            invalidTarget?.blockId === block.id &&
+                            invalidTarget.field === "image-alt"
+                          ) {
+                            setInvalidField(null);
+                            setInvalidTarget(null);
+                            setError("");
+                          }
+                        }}
                         className="h-4 w-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
                       />
                       This image is decorative
@@ -1601,12 +1646,14 @@ export default function PostEditor({
         </div>
 
         {showPreview ? (
-          <section
+          <div
             id={`${baseId}-preview`}
-            aria-label="Post preview"
             className="mt-6 rounded-md border border-[#767676] bg-white p-4"
           >
-            <h3 className="mb-3 text-sm font-semibold uppercase text-[#595959]">
+            <h3
+              id={`${baseId}-preview-heading`}
+              className="mb-3 text-sm font-semibold uppercase text-[#595959]"
+            >
               Preview
             </h3>
             <article className="wp-prose">
@@ -1619,7 +1666,7 @@ export default function PostEditor({
                 dangerouslySetInnerHTML={{ __html: blocksToHtml(blocks) }}
               />
             </article>
-          </section>
+          </div>
         ) : null}
       </div>
 
@@ -1643,8 +1690,8 @@ export default function PostEditor({
           </select>
         </div>
 
-        <div>
-          <p className="text-sm font-semibold">Status</p>
+        <fieldset>
+          <legend className="text-sm font-semibold">Status</legend>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
@@ -1671,7 +1718,7 @@ export default function PostEditor({
               Publish now
             </button>
           </div>
-        </div>
+        </fieldset>
 
         <p id={statusId} role="status" aria-live="polite" className="sr-only">
           {liveMessage}

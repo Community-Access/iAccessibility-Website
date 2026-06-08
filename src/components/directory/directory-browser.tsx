@@ -1,35 +1,56 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Filter } from "lucide-react";
+import { Filter, Search, X } from "lucide-react";
 import { BrandedMediaFrame } from "@/components/layout/branded-media-frame";
 import { Modal, ModalActions, ModalButton } from "@/components/ui/modal";
 import type { DirectoryEntrySummary } from "@/lib/content/wordpress";
 
 const DEFAULT_RECENT = 10;
+const DEFAULT_RATINGS = [
+  "5 - Fully Accessible",
+  "4 - Mostly Accessible",
+  "3 - Average",
+  "2 - Needs Work",
+  "1 - Not Accessible"
+];
+
+type FilterKind = "category" | "platform" | "rating";
+
+function toggleValue(values: string[], value: string) {
+  return values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+}
+
+function countLabel(count: number) {
+  return `${count} app${count === 1 ? "" : "s"}`;
+}
 
 export function DirectoryBrowser({
   entries,
   categories,
-  platforms
+  platforms,
+  ratings
 }: {
   entries: DirectoryEntrySummary[];
   categories: string[];
   platforms: string[];
+  ratings: string[];
 }) {
-  // Category is a single-select quick filter (radio group). Search + platforms
-  // are staged in the Filter modal and applied on "Apply".
-  const [selectedCategory, setSelectedCategory] = useState("");
   const [search, setSearch] = useState("");
+  const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [activePlatforms, setActivePlatforms] = useState<string[]>([]);
+  const [activeRatings, setActiveRatings] = useState<string[]>([]);
 
   const [filterOpen, setFilterOpen] = useState(false);
-  const [pendingSearch, setPendingSearch] = useState("");
+  const [pendingCategories, setPendingCategories] = useState<string[]>([]);
   const [pendingPlatforms, setPendingPlatforms] = useState<string[]>([]);
+  const [pendingRatings, setPendingRatings] = useState<string[]>([]);
 
   const [announcement, setAnnouncement] = useState("");
-  const headingRef = useRef<HTMLHeadingElement>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const filterFirstFieldRef = useRef<HTMLInputElement>(null);
   const didMount = useRef(false);
 
   const categoryCounts = useMemo(() => {
@@ -42,6 +63,34 @@ export function DirectoryBrowser({
     return counts;
   }, [entries]);
 
+  const platformCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const entry of entries) {
+      for (const platform of entry.platforms) {
+        counts.set(platform, (counts.get(platform) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [entries]);
+
+  const ratingCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const entry of entries) {
+      if (entry.accessibilityRating) {
+        counts.set(
+          entry.accessibilityRating,
+          (counts.get(entry.accessibilityRating) ?? 0) + 1
+        );
+      }
+    }
+    return counts;
+  }, [entries]);
+
+  const ratingOptions = useMemo(() => {
+    const merged = new Set([...DEFAULT_RATINGS, ...ratings]);
+    return Array.from(merged);
+  }, [ratings]);
+
   // id descending = most recent first.
   const byRecency = useMemo(
     () => [...entries].sort((a, b) => b.id - a.id),
@@ -50,14 +99,21 @@ export function DirectoryBrowser({
 
   const filtered = useMemo(() => {
     let list = byRecency;
-    if (selectedCategory) {
+    if (activeCategories.length > 0) {
       list = list.filter((entry) =>
-        entry.categories.includes(selectedCategory)
+        activeCategories.some((category) => entry.categories.includes(category))
       );
     }
     if (activePlatforms.length > 0) {
       list = list.filter((entry) =>
         activePlatforms.some((platform) => entry.platforms.includes(platform))
+      );
+    }
+    if (activeRatings.length > 0) {
+      list = list.filter(
+        (entry) =>
+          entry.accessibilityRating &&
+          activeRatings.includes(entry.accessibilityRating)
       );
     }
     const query = search.trim().toLowerCase();
@@ -69,140 +125,182 @@ export function DirectoryBrowser({
       );
     }
     return list;
-  }, [byRecency, selectedCategory, activePlatforms, search]);
+  }, [byRecency, activeCategories, activePlatforms, activeRatings, search]);
 
   const hasActiveFilter = Boolean(
-    selectedCategory || search.trim() || activePlatforms.length
+    search.trim() ||
+      activeCategories.length ||
+      activePlatforms.length ||
+      activeRatings.length
   );
   const visible = hasActiveFilter ? filtered : filtered.slice(0, DEFAULT_RECENT);
-  const isSearching = Boolean(search.trim());
-  const headingText = isSearching
+  const activeFilterCount =
+    activeCategories.length + activePlatforms.length + activeRatings.length;
+  const headingText = search.trim()
     ? "Search results"
-    : selectedCategory || "Recent apps";
-  const activeFilterCount = (search.trim() ? 1 : 0) + activePlatforms.length;
+    : activeFilterCount > 0
+      ? "Filtered apps"
+      : "Recent apps";
 
-  // Announce result changes (never on initial mount).
   useEffect(() => {
     if (!didMount.current) {
       didMount.current = true;
       return;
     }
     const n = visible.length;
-    if (n === 0) {
-      setAnnouncement(
-        isSearching ? `No apps found for "${search.trim()}".` : "No apps found."
-      );
-    } else if (selectedCategory && !isSearching) {
-      setAnnouncement(
-        `Loaded ${n} app${n === 1 ? "" : "s"} in ${selectedCategory}.`
-      );
-    } else {
-      setAnnouncement(`${n} app${n === 1 ? "" : "s"} found.`);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible.length, selectedCategory, search]);
-
-  function selectCategory(category: string) {
-    setSelectedCategory(category);
-    // Move focus to the results heading so VO lands on the new context.
-    requestAnimationFrame(() => headingRef.current?.focus());
-  }
+    const query = search.trim();
+    const timer = window.setTimeout(() => {
+      if (n === 0) {
+        setAnnouncement(
+          query ? `No apps found for "${query}".` : "No apps found."
+        );
+      } else {
+        setAnnouncement(`${n} app${n === 1 ? "" : "s"} found.`);
+      }
+    }, 20);
+    setAnnouncement("");
+    return () => window.clearTimeout(timer);
+  }, [
+    visible.length,
+    search,
+    activeCategories,
+    activePlatforms,
+    activeRatings
+  ]);
 
   function openFilter() {
-    setPendingSearch(search);
+    setPendingCategories(activeCategories);
     setPendingPlatforms(activePlatforms);
+    setPendingRatings(activeRatings);
     setFilterOpen(true);
   }
 
   function applyFilter() {
-    setSearch(pendingSearch);
+    setActiveCategories(pendingCategories);
     setActivePlatforms(pendingPlatforms);
+    setActiveRatings(pendingRatings);
     setFilterOpen(false);
-    requestAnimationFrame(() => headingRef.current?.focus());
   }
 
-  function togglePendingPlatform(platform: string) {
-    setPendingPlatforms((current) =>
-      current.includes(platform)
-        ? current.filter((value) => value !== platform)
-        : [...current, platform]
+  function clearFilters() {
+    setSearch("");
+    setActiveCategories([]);
+    setActivePlatforms([]);
+    setActiveRatings([]);
+    setPendingCategories([]);
+    setPendingPlatforms([]);
+    setPendingRatings([]);
+    setAnnouncement(`${entries.length} app${entries.length === 1 ? "" : "s"} available.`);
+  }
+
+  function removeFilter(kind: FilterKind, value: string) {
+    if (kind === "category") {
+      setActiveCategories((current) => current.filter((item) => item !== value));
+    }
+    if (kind === "platform") {
+      setActivePlatforms((current) => current.filter((item) => item !== value));
+    }
+    if (kind === "rating") {
+      setActiveRatings((current) => current.filter((item) => item !== value));
+    }
+  }
+
+  function filterChip(kind: FilterKind, value: string) {
+    const prefix =
+      kind === "category" ? "Category" : kind === "platform" ? "Platform" : "Rating";
+    return (
+      <button
+        key={`${kind}-${value}`}
+        type="button"
+        onClick={() => removeFilter(kind, value)}
+        className="inline-flex items-center gap-1.5 rounded-full border border-[#767676] bg-white px-3 py-1 text-sm font-medium text-[#222222] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        aria-label={`Remove ${prefix.toLowerCase()} filter ${value}`}
+      >
+        <span className="sr-only">{prefix}: </span>
+        {value}
+        <X className="h-3.5 w-3.5" aria-hidden="true" />
+      </button>
     );
   }
 
-  const categoryOptions = [
-    { value: "", label: "All apps", count: entries.length },
-    ...categories.map((category) => ({
-      value: category,
-      label: category,
-      count: categoryCounts.get(category) ?? 0
-    }))
-  ];
-
   return (
     <div className="space-y-6">
-      <p role="status" aria-live="polite" className="sr-only">
+      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {announcement}
       </p>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <fieldset className="min-w-0">
-          <legend className="mb-2 text-lg font-semibold text-[#222222]">
-            Categories
-          </legend>
-          <div className="flex flex-wrap gap-2">
-            {categoryOptions.map((option) => (
-              <label key={option.value || "all"} className="cursor-pointer">
-                <input
-                  type="radio"
-                  name="directory-category"
-                  value={option.value}
-                  checked={selectedCategory === option.value}
-                  onChange={() => selectCategory(option.value)}
-                  className="peer sr-only"
-                />
-                <span className="inline-flex items-center rounded-full border border-[#767676] px-3 py-1.5 text-sm font-medium text-[#222222] hover:bg-muted peer-checked:border-[#0066bf] peer-checked:bg-[#0066bf] peer-checked:text-white peer-checked:before:mr-1 peer-checked:before:content-['✓'] peer-checked:hover:bg-[#035a9e] peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2">
-                  {option.label}
-                  <span aria-hidden="true">&nbsp;({option.count})</span>
-                  <span className="sr-only">
-                    , {option.count} app{option.count === 1 ? "" : "s"}
-                  </span>
-                </span>
-              </label>
-            ))}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <div className="relative flex-1">
+            <label
+              htmlFor="directory-search"
+              className="block text-sm font-semibold text-[#222222]"
+            >
+              Search apps
+            </label>
+            <Search
+              className="pointer-events-none absolute left-3 top-[2.35rem] h-5 w-5 text-[#595959]"
+              aria-hidden="true"
+            />
+            <input
+              id="directory-search"
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="App name or description"
+              className="mt-1 w-full rounded-md border border-[#767676] bg-white py-2 pl-10 pr-3 text-[#222222] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
           </div>
-        </fieldset>
 
-        <button
-          ref={filterButtonRef}
-          type="button"
-          onClick={openFilter}
-          aria-haspopup="dialog"
-          className="inline-flex shrink-0 items-center gap-2 rounded-md border border-[#767676] px-4 py-2 text-sm font-semibold text-[#222222] hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-          <Filter className="h-4 w-4" aria-hidden="true" />
-          Filter
-          {activeFilterCount > 0 ? (
-            <>
-              <span className="sr-only">, {activeFilterCount} active</span>
-              <span
-                aria-hidden="true"
-                className="rounded-full bg-[#0066bf] px-1.5 text-xs font-bold text-white"
-              >
+          <button
+            ref={filterButtonRef}
+            type="button"
+            onClick={openFilter}
+            aria-haspopup="dialog"
+            className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:self-end ${
+              activeFilterCount > 0
+                ? "border-[#0066bf] bg-[#0066bf] text-white hover:bg-[#035a9e]"
+                : "border-[#767676] bg-white text-[#222222] hover:bg-muted"
+            }`}
+          >
+            <Filter className="h-4 w-4" aria-hidden="true" />
+            Filters
+            {activeFilterCount > 0 ? (
+              <span className="rounded-full bg-white px-1.5 text-xs font-bold text-[#0066bf]">
+                <span className="sr-only">, </span>
                 {activeFilterCount}
+                <span className="sr-only"> active</span>
               </span>
-            </>
-          ) : null}
-        </button>
+            ) : null}
+          </button>
+        </div>
+
+        {hasActiveFilter ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold text-[#b91c1c] hover:bg-[#fee2e2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+              Clear all
+            </button>
+            <div className="flex flex-wrap gap-2">
+              {activeCategories.map((category) =>
+                filterChip("category", category)
+              )}
+              {activePlatforms.map((platform) =>
+                filterChip("platform", platform)
+              )}
+              {activeRatings.map((rating) => filterChip("rating", rating))}
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      <section aria-labelledby="directory-results-heading">
+      <div>
         <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
-          <h2
-            id="directory-results-heading"
-            ref={headingRef}
-            tabIndex={-1}
-            className="text-2xl font-semibold text-[#222222] focus:outline-none"
-          >
+          <h2 id="directory-results-heading" className="text-2xl font-semibold text-[#222222]">
             {headingText}
           </h2>
           <p className="text-sm text-[#595959]">
@@ -219,7 +317,7 @@ export function DirectoryBrowser({
               No apps found
             </h3>
             <p className="mt-1 text-[#595959]">
-              Try a different category or adjust your filters.
+              Try a different search or adjust your filters.
             </p>
           </div>
         ) : (
@@ -257,6 +355,11 @@ export function DirectoryBrowser({
                           {entry.platforms.join(" · ")}
                         </p>
                       ) : null}
+                      {entry.accessibilityRating ? (
+                        <p className="mt-2 text-sm font-medium text-[#222222]">
+                          Accessibility rating: {entry.accessibilityRating}
+                        </p>
+                      ) : null}
                       {entry.description ? (
                         <p className="mt-2 text-sm text-[#595959]">
                           {entry.description}
@@ -269,65 +372,117 @@ export function DirectoryBrowser({
             })}
           </ul>
         )}
-      </section>
+      </div>
 
       <Modal
         isOpen={filterOpen}
         onClose={() => setFilterOpen(false)}
         title="Filter apps"
-        description="Search by name and narrow by platform, then apply."
+        description="Select categories, platforms, and accessibility ratings to narrow the directory."
         triggerRef={filterButtonRef}
+        initialFocusRef={filterFirstFieldRef}
       >
-        <div className="space-y-5">
-          <div>
-            <label
-              htmlFor="directory-filter-search"
-              className="block text-sm font-semibold"
-            >
-              Search apps
-            </label>
-            <input
-              id="directory-filter-search"
-              type="search"
-              value={pendingSearch}
-              onChange={(event) => setPendingSearch(event.target.value)}
-              placeholder="App name or description"
-              className="mt-1 w-full rounded-md border border-[#767676] bg-white px-3 py-2 text-[#222222] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            />
-          </div>
-
-          {platforms.length > 0 ? (
-            <fieldset>
-              <legend className="text-sm font-semibold">Platforms</legend>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {platforms.map((platform) => (
-                  <label
-                    key={platform}
-                    className="flex items-center gap-2 text-sm"
-                  >
+        <div className="space-y-6">
+          <fieldset className="border-0 p-0">
+            <legend className="text-sm font-semibold">Categories</legend>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {categories.map((category, index) => {
+                const count = categoryCounts.get(category) ?? 0;
+                return (
+                  <label key={category} className="flex items-center gap-2 text-sm">
                     <input
+                      ref={index === 0 ? filterFirstFieldRef : undefined}
                       type="checkbox"
-                      checked={pendingPlatforms.includes(platform)}
-                      onChange={() => togglePendingPlatform(platform)}
+                      checked={pendingCategories.includes(category)}
+                      onChange={() =>
+                        setPendingCategories((current) =>
+                          toggleValue(current, category)
+                        )
+                      }
                       className="h-4 w-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     />
-                    {platform}
+                    <span>
+                      {category}
+                      <span aria-hidden="true"> ({count})</span>
+                      <span className="sr-only">, {countLabel(count)}</span>
+                    </span>
                   </label>
-                ))}
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {platforms.length > 0 ? (
+            <fieldset className="border-0 p-0">
+              <legend className="text-sm font-semibold">Platforms</legend>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {platforms.map((platform) => {
+                  const count = platformCounts.get(platform) ?? 0;
+                  return (
+                    <label key={platform} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={pendingPlatforms.includes(platform)}
+                        onChange={() =>
+                          setPendingPlatforms((current) =>
+                            toggleValue(current, platform)
+                          )
+                        }
+                        className="h-4 w-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      />
+                      <span>
+                        {platform}
+                        <span aria-hidden="true"> ({count})</span>
+                        <span className="sr-only">, {countLabel(count)}</span>
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             </fieldset>
           ) : null}
+
+          <fieldset className="border-0 p-0">
+            <legend className="text-sm font-semibold">
+              Accessibility rating
+            </legend>
+            <div className="mt-2 space-y-2">
+              {ratingOptions.map((rating) => {
+                const count = ratingCounts.get(rating) ?? 0;
+                return (
+                  <label key={rating} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={pendingRatings.includes(rating)}
+                      onChange={() =>
+                        setPendingRatings((current) =>
+                          toggleValue(current, rating)
+                        )
+                      }
+                      className="h-4 w-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                    <span>
+                      {rating}
+                      <span aria-hidden="true"> ({count})</span>
+                      <span className="sr-only">, {countLabel(count)}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
         </div>
 
         <ModalActions>
           <ModalButton
             variant="secondary"
             onClick={() => {
-              setPendingSearch("");
+              setPendingCategories([]);
               setPendingPlatforms([]);
+              setPendingRatings([]);
             }}
           >
-            Clear
+            Clear all
           </ModalButton>
           <ModalButton variant="primary" onClick={applyFilter}>
             Apply filters

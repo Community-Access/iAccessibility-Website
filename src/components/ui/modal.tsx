@@ -141,6 +141,7 @@ export function Modal({
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
+      aria-modal="true"
       aria-labelledby="modal-title"
       aria-describedby={description ? "modal-description" : undefined}
       className={cn(

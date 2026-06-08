@@ -41,6 +41,7 @@ export type DirectoryEntrySummary = {
   appStoreUrl?: string | null;
   websiteUrl?: string | null;
   iconUrl?: string | null;
+  accessibilityRating?: string | null;
   platforms: string[];
   categories: string[];
 };
@@ -48,6 +49,7 @@ export type DirectoryEntrySummary = {
 export type DirectoryFacets = {
   platforms: string[];
   categories: string[];
+  ratings: string[];
 };
 
 // Platform prefixes used by the migrated "Platform: Category" directory taxonomy.
@@ -163,6 +165,22 @@ export const DIRECTORY_CATEGORIES = [
   "Utilities",
   "Weather"
 ];
+
+const DIRECTORY_ACCESSIBILITY_RATINGS = [
+  "5 - Fully Accessible",
+  "4 - Mostly Accessible",
+  "3 - Average",
+  "2 - Needs Work",
+  "1 - Not Accessible"
+];
+
+function directoryRatingForScore(score: string | number) {
+  return (
+    DIRECTORY_ACCESSIBILITY_RATINGS.find((rating) =>
+      rating.startsWith(`${score} -`)
+    ) ?? null
+  );
+}
 
 function decodeEntities(value: string) {
   return value
@@ -479,14 +497,55 @@ function splitDirectoryCategoryName(name: string): {
   if (colon > -1) {
     const platform = name.slice(0, colon).trim();
     const category = name.slice(colon + 1).trim();
+    const knownPlatform = KNOWN_DIRECTORY_PLATFORMS.has(platform)
+      ? platform
+      : null;
+    if (directoryAccessibilityRatingFromCategory(category)) {
+      return { platform: knownPlatform, category: null };
+    }
     return {
-      platform: KNOWN_DIRECTORY_PLATFORMS.has(platform) ? platform : null,
+      platform: knownPlatform,
       category: category || null
     };
+  }
+  if (directoryAccessibilityRatingFromCategory(name)) {
+    return { platform: null, category: null };
   }
   // Base categories without a platform prefix; ignore the "… App Directory" roots.
   if (/\bApp Directory$/i.test(name)) return { platform: null, category: null };
   return { platform: null, category: name.trim() || null };
+}
+
+function directoryAccessibilityRatingFromCategory(name: string) {
+  const category = name.includes(":") ? name.split(":").pop() ?? name : name;
+  const match = category.trim().match(/^([1-5])\s+stars?$/i);
+  return match ? directoryRatingForScore(match[1]) : null;
+}
+
+function directoryAccessibilityRating(description: string | null) {
+  const text = decodeEntities(
+    stripHtml(
+      (description ?? "")
+        .replace(/<br\s*\/?>/gi, " ")
+        .replace(/<\/p>/gi, " ")
+    )
+  )
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  const markerIndex = text.search(/accessibility\s+rating\s*:?/);
+  if (markerIndex === -1) return null;
+
+  const ratingText = text.slice(markerIndex);
+  const scoreMatch = ratingText.match(/accessibility\s+rating\s*:?\s*([1-5])\b/);
+  const scoreRating = scoreMatch ? directoryRatingForScore(scoreMatch[1]) : null;
+  return (
+    scoreRating ??
+    DIRECTORY_ACCESSIBILITY_RATINGS.find((rating) =>
+      ratingText.includes(rating.toLowerCase())
+    ) ??
+    null
+  );
 }
 
 export async function getDirectoryEntries(): Promise<DirectoryEntrySummary[]> {
@@ -519,12 +578,22 @@ export async function getDirectoryEntries(): Promise<DirectoryEntrySummary[]> {
 
   const facetsByEntry = new Map<
     number,
-    { platforms: Set<string>; categories: Set<string> }
+    {
+      platforms: Set<string>;
+      categories: Set<string>;
+      ratings: Set<string>;
+    }
   >();
   for (const link of links) {
     const bucket =
       facetsByEntry.get(link.entryId) ??
-      { platforms: new Set<string>(), categories: new Set<string>() };
+      {
+        platforms: new Set<string>(),
+        categories: new Set<string>(),
+        ratings: new Set<string>()
+      };
+    const rating = directoryAccessibilityRatingFromCategory(link.name);
+    if (rating) bucket.ratings.add(rating);
     const { platform, category } = splitDirectoryCategoryName(link.name);
     if (platform) bucket.platforms.add(platform);
     if (category) bucket.categories.add(category);
@@ -533,6 +602,9 @@ export async function getDirectoryEntries(): Promise<DirectoryEntrySummary[]> {
 
   return rows.map((entry) => {
     const bucket = facetsByEntry.get(entry.id);
+    const taxonomyRating = DIRECTORY_ACCESSIBILITY_RATINGS.find((rating) =>
+      bucket?.ratings.has(rating)
+    );
     return {
       id: entry.id,
       appName: entry.appName,
@@ -542,6 +614,8 @@ export async function getDirectoryEntries(): Promise<DirectoryEntrySummary[]> {
       appStoreUrl: entry.appStoreUrl,
       websiteUrl: entry.websiteUrl,
       iconUrl: entry.iconUrl,
+      accessibilityRating:
+        directoryAccessibilityRating(entry.description) ?? taxonomyRating ?? null,
       platforms: bucket ? Array.from(bucket.platforms).sort() : [],
       categories: bucket ? Array.from(bucket.categories).sort() : []
     };
@@ -555,13 +629,16 @@ export function deriveDirectoryFacets(
 ): DirectoryFacets {
   const platforms = new Set<string>();
   const categories = new Set<string>();
+  const ratings = new Set<string>();
   for (const entry of entries) {
     entry.platforms.forEach((platform) => platforms.add(platform));
     entry.categories.forEach((category) => categories.add(category));
+    if (entry.accessibilityRating) ratings.add(entry.accessibilityRating);
   }
   return {
     platforms: Array.from(platforms).sort(),
-    categories: Array.from(categories).sort((a, b) => a.localeCompare(b))
+    categories: Array.from(categories).sort((a, b) => a.localeCompare(b)),
+    ratings: Array.from(ratings).sort((a, b) => a.localeCompare(b))
   };
 }
 

@@ -46,6 +46,7 @@ export default async function AppDirectoryPage() {
             entries={entries}
             categories={facets.categories}
             platforms={facets.platforms}
+            ratings={facets.ratings}
           />
         )}
       </div>
