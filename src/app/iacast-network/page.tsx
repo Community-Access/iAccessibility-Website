@@ -29,7 +29,7 @@ export default async function IACastPage({
         </p>
       </section>
 
-      <section className="wp-article" aria-labelledby="iacast-browse-heading">
+      <div className="wp-article">
         <h2 id="iacast-browse-heading" className="sr-only">
           Browse episodes
         </h2>
@@ -45,7 +45,7 @@ export default async function IACastPage({
             initialPage={initialPage}
           />
         )}
-      </section>
+      </div>
 
       <AudioSubmissionForm />
     </div>

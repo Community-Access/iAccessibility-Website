@@ -8,6 +8,9 @@ import { canAdmin, getCurrentAppUser } from "@/lib/auth/server";
 import { dateLabel } from "@/lib/content/wordpress";
 
 export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "Posts"
+};
 
 type PostRow = {
   id: number;
@@ -39,7 +42,12 @@ export default async function AdminPostsPage() {
       : [];
 
   const columns: ItemTableColumn<PostRow>[] = [
-    { key: "title", header: "Title", rowHeader: true, render: (p) => p.title },
+    {
+      key: "title",
+      header: "Title",
+      rowHeader: true,
+      render: (p) => <h3 className="text-base font-semibold">{p.title}</h3>
+    },
     {
       key: "status",
       header: "Status",
@@ -47,15 +55,15 @@ export default async function AdminPostsPage() {
     },
     {
       key: "published",
-      header: "Published",
+      header: "Date",
       render: (p) =>
-        p.publishedAt ? dateLabel(p.publishedAt.toISOString()) : "—"
+        p.publishedAt ? dateLabel(p.publishedAt.toISOString()) : "Not published"
     }
   ];
 
   return (
     <div className="space-y-8">
-      <section className="wp-article">
+      <div className="wp-article">
         <h1 className="text-3xl font-bold">Posts</h1>
         <p className="mt-3 text-[#595959]">
           Manage blog posts and write new ones with an accessible editor.
@@ -68,9 +76,9 @@ export default async function AdminPostsPage() {
             New post
           </Link>
         </p>
-      </section>
+      </div>
 
-      <section className="wp-article" aria-labelledby="recent-posts-heading">
+      <div className="wp-article">
         <h2 id="recent-posts-heading" className="mb-4 text-2xl font-semibold">
           Recent posts
         </h2>
@@ -80,10 +88,12 @@ export default async function AdminPostsPage() {
           columns={columns}
           items={recent}
           getItemKey={(p) => String(p.id)}
+          getItemHref={(p) => `/blog/${p.slug}`}
+          nameColumnKey="title"
           emptyTitle="No posts yet"
           emptyMessage="Create your first post with the accessible editor."
         />
-      </section>
+      </div>
     </div>
   );
 }

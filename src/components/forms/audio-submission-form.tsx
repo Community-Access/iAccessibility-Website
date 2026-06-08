@@ -7,14 +7,22 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+type SubmissionStatus = {
+  tone: "idle" | "success" | "error";
+  message: string;
+};
+
 export function AudioSubmissionForm() {
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState<SubmissionStatus>({
+    tone: "idle",
+    message: ""
+  });
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    setStatus("");
+    setStatus({ tone: "idle", message: "" });
 
     const response = await fetch("/api/submissions/audio", {
       method: "POST",
@@ -26,14 +34,20 @@ export function AudioSubmissionForm() {
 
     if (response.ok) {
       event.currentTarget.reset();
-      setStatus("Your audio content was submitted for media-team review.");
+      setStatus({
+        tone: "success",
+        message: "Your audio content was submitted for media-team review."
+      });
     } else {
-      setStatus(payload.error || "The audio submission could not be sent.");
+      setStatus({
+        tone: "error",
+        message: payload.error || "The audio submission could not be sent."
+      });
     }
   }
 
   return (
-    <section className="wp-article" aria-labelledby="audio-submission-heading">
+    <div className="wp-article">
       <h2 id="audio-submission-heading" className="mb-4 text-2xl font-semibold">
         Submit Audio Content
       </h2>
@@ -75,12 +89,30 @@ export function AudioSubmissionForm() {
           {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
           Submit audio
         </Button>
-        {status ? (
-          <p role="status" aria-live="polite" className="text-sm font-medium">
-            {status}
-          </p>
-        ) : null}
+        <p
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className={
+            status.tone === "success"
+              ? "text-sm font-medium text-[#166534]"
+              : "sr-only"
+          }
+        >
+          {status.tone === "success" ? status.message : ""}
+        </p>
+        <p
+          role="alert"
+          aria-atomic="true"
+          className={
+            status.tone === "error"
+              ? "text-sm font-medium text-[#b91c1c]"
+              : "sr-only"
+          }
+        >
+          {status.tone === "error" ? status.message : ""}
+        </p>
       </form>
-    </section>
+    </div>
   );
 }

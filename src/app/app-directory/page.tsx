@@ -47,7 +47,7 @@ export default async function AppDirectoryPage({
         </div>
       </section>
 
-      <section className="wp-article" aria-labelledby="directory-browse-heading">
+      <div className="wp-article">
         <h2 id="directory-browse-heading" className="sr-only">
           Browse apps
         </h2>
@@ -69,12 +69,9 @@ export default async function AppDirectoryPage({
             initialPage={initialPage}
           />
         )}
-      </section>
+      </div>
 
-      <section
-        className="wp-article text-center"
-        aria-labelledby="directory-submit-heading"
-      >
+      <div className="wp-article text-center">
         <h2 id="directory-submit-heading" className="text-2xl font-semibold">
           Submit an app
         </h2>
@@ -87,7 +84,7 @@ export default async function AppDirectoryPage({
             <Link href="/app-directory/submit">Submit App</Link>
           </Button>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

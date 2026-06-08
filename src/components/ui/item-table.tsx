@@ -17,7 +17,7 @@ export interface ItemTableColumn<T> {
 export interface ItemTableProps<T> {
   /** Accessible caption / name for the table. */
   caption: string;
-  /** Stable id used for aria-labelledby + skip-link targets. */
+  /** Stable id used for the table caption. */
   headingId?: string;
   columns: ItemTableColumn<T>[];
   items: T[];
@@ -53,7 +53,7 @@ export function ItemTable<T>({
 
   if (items.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-white p-8 text-center">
+      <div className="rounded-lg border border-[#767676] bg-white p-8 text-center">
         <h3 className="text-lg font-semibold text-[#222222]">{emptyTitle}</h3>
         <p className="mt-1 text-[#595959]">{emptyMessage}</p>
       </div>
@@ -62,23 +62,10 @@ export function ItemTable<T>({
 
   return (
     <div className="space-y-2">
-      <a
-        href={`#${tableId}-bottom`}
-        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:rounded-md focus:bg-[#0066bf] focus:px-4 focus:py-2 focus:text-white focus:outline-none"
-      >
-        Skip to bottom of {caption}
-      </a>
-
-      <div
-        role="region"
-        aria-label={`${caption} (scrollable)`}
-        tabIndex={0}
-        className="overflow-x-auto rounded-lg border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
-      >
-        <table className="w-full" aria-labelledby={tableId}>
+      <div className="rounded-lg border border-[#767676]">
+        <table className="w-full table-fixed">
           <caption id={tableId} className="sr-only">
-            {caption} &mdash; {items.length} item
-            {items.length === 1 ? "" : "s"}
+            {caption}
           </caption>
           <thead>
             <tr className="bg-muted">
@@ -86,7 +73,7 @@ export function ItemTable<T>({
                 <th
                   key={col.key}
                   scope="col"
-                  className={`px-4 py-3 text-sm font-semibold text-[#222222] ${alignClass(col.align)}`}
+                  className={`break-words px-3 py-3 text-sm font-semibold text-[#222222] ${alignClass(col.align)}`}
                 >
                   {col.header}
                 </th>
@@ -95,14 +82,17 @@ export function ItemTable<T>({
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={getItemKey(item)} className="border-t border-border">
+              <tr key={getItemKey(item)} className="border-t border-[#767676]">
                 {columns.map((col) => {
                   const href =
                     col.key === nameColumnKey && getItemHref
                       ? getItemHref(item)
                       : null;
                   const content = href ? (
-                    <Link href={href} className="text-[#0f6cba] hover:underline">
+                    <Link
+                      href={href}
+                      className="break-words text-[#0f6cba] underline underline-offset-2 hover:no-underline"
+                    >
                       {col.render(item)}
                     </Link>
                   ) : (
@@ -114,7 +104,7 @@ export function ItemTable<T>({
                       <th
                         key={col.key}
                         scope="row"
-                        className={`px-4 py-3 font-normal ${alignClass(col.align)}`}
+                        className={`break-words px-3 py-3 font-normal align-top ${alignClass(col.align)}`}
                       >
                         {content}
                       </th>
@@ -123,7 +113,7 @@ export function ItemTable<T>({
                   return (
                     <td
                       key={col.key}
-                      className={`px-4 py-3 ${alignClass(col.align)}`}
+                      className={`break-words px-3 py-3 align-top ${alignClass(col.align)}`}
                     >
                       {content}
                     </td>
@@ -133,15 +123,6 @@ export function ItemTable<T>({
             ))}
           </tbody>
         </table>
-      </div>
-
-      <div id={`${tableId}-bottom`}>
-        <a
-          href={`#${tableId}`}
-          className="sr-only focus:not-sr-only focus:inline-block focus:rounded-md focus:bg-[#0066bf] focus:px-4 focus:py-2 focus:text-white focus:outline-none"
-        >
-          Skip to top of {caption}
-        </a>
       </div>
     </div>
   );

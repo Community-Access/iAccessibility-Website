@@ -30,6 +30,11 @@ type BlockCommand = {
   level?: HeadingLevel;
 };
 
+export type PostEditorCategory = {
+  id: number;
+  name: string;
+};
+
 type InvalidTarget = {
   blockId: string;
   field: "content" | "image-url" | "image-alt" | "caption";
@@ -37,7 +42,6 @@ type InvalidTarget = {
 
 const blockCommands: BlockCommand[] = [
   { type: "paragraph", label: "Paragraph" },
-  { type: "heading", label: "Heading 1", level: 1 },
   { type: "heading", label: "Heading 2", level: 2 },
   { type: "heading", label: "Heading 3", level: 3 },
   { type: "heading", label: "Heading 4", level: 4 },
@@ -425,33 +429,43 @@ function isRedirect(err: unknown) {
   );
 }
 
-export default function PostEditor() {
+export default function PostEditor({
+  categories = []
+}: {
+  categories?: PostEditorCategory[];
+}) {
   const baseId = useId();
   const titleId = `${baseId}-title`;
   const bodyHeadingId = `${baseId}-body-heading`;
   const bodyHelpId = `${baseId}-body-help`;
   const fileId = `${baseId}-file`;
   const altId = `${baseId}-alt`;
+  const categoryId = `${baseId}-category`;
   const errorId = `${baseId}-error`;
   const statusId = `${baseId}-status`;
   const commandTitleId = `${baseId}-command-title`;
   const commandDialogId = `${baseId}-command-dialog`;
   const commandListId = `${baseId}-command-list`;
+  const commandStatusId = `${baseId}-command-status`;
 
   const titleRef = useRef<HTMLInputElement>(null);
   const blockRefs = useRef<Record<string, HTMLElement | null>>({});
   const imageAltRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const captionRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const menuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const menuReturnFocusRefs = useRef<Record<string, HTMLElement | null>>({});
   const altRef = useRef<HTMLInputElement>(null);
   const commandInputRef = useRef<HTMLInputElement>(null);
   const commandDialogRef = useRef<HTMLDialogElement>(null);
 
   const [title, setTitle] = useState("");
   const [blocks, setBlocks] = useState<EditorBlock[]>(() => [createBlock()]);
+  const initialFocusBlockIdRef = useRef(blocks[0]?.id ?? null);
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [featuredUrl, setFeaturedUrl] = useState("");
   const [featuredAlt, setFeaturedAlt] = useState("");
+  const [featuredDecorative, setFeaturedDecorative] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -469,6 +483,7 @@ export default function PostEditor() {
   const [commandStatus, setCommandStatus] = useState("");
   const commandReturnFocusRef = useRef<HTMLElement | null>(null);
   const liveMessageTimerRef = useRef<number | null>(null);
+  const commandStatusTimerRef = useRef<number | null>(null);
 
   const filteredCommands = blockCommands.filter((item) =>
     item.label.toLowerCase().includes(commandQuery.trim().toLowerCase())
@@ -480,13 +495,13 @@ export default function PostEditor() {
   const activeCommand = filteredCommands[safeActiveCommandIndex];
 
   useEffect(() => {
-    if (!commandOpen) return;
-    setCommandStatus(
-      filteredCommands.length === 0
-        ? "No matching commands."
-        : `${filteredCommands.length} command${filteredCommands.length === 1 ? "" : "s"} available.`
-    );
-  }, [commandOpen, filteredCommands.length]);
+    window.setTimeout(() => {
+      const blockId = initialFocusBlockIdRef.current;
+      if (blockId) {
+        blockRefs.current[blockId]?.focus();
+      }
+    }, 0);
+  }, []);
 
   useEffect(() => {
     if (!commandOpen || !commandDialogRef.current) return;
@@ -494,6 +509,28 @@ export default function PostEditor() {
       commandDialogRef.current.showModal();
     }
   }, [commandOpen]);
+
+  useEffect(() => {
+    if (commandStatusTimerRef.current) {
+      window.clearTimeout(commandStatusTimerRef.current);
+    }
+
+    if (!commandOpen) return;
+
+    commandStatusTimerRef.current = window.setTimeout(() => {
+      setCommandStatus(
+        filteredCommands.length === 0
+          ? "No matching commands."
+          : `${filteredCommands.length} command${filteredCommands.length === 1 ? "" : "s"} available.`
+      );
+    }, 250);
+
+    return () => {
+      if (commandStatusTimerRef.current) {
+        window.clearTimeout(commandStatusTimerRef.current);
+      }
+    };
+  }, [commandOpen, filteredCommands.length]);
 
   useEffect(() => {
     function onWindowKeyDown(event: KeyboardEvent) {
@@ -504,12 +541,15 @@ export default function PostEditor() {
     }
     window.addEventListener("keydown", onWindowKeyDown);
     return () => window.removeEventListener("keydown", onWindowKeyDown);
-  });
+  }, []);
 
   useEffect(() => {
     return () => {
       if (liveMessageTimerRef.current) {
         window.clearTimeout(liveMessageTimerRef.current);
+      }
+      if (commandStatusTimerRef.current) {
+        window.clearTimeout(commandStatusTimerRef.current);
       }
     };
   }, []);
@@ -525,8 +565,18 @@ export default function PostEditor() {
     }, 20);
   }
 
-  function focusBlock(blockId: string) {
-    window.setTimeout(() => blockRefs.current[blockId]?.focus(), 0);
+  function focusBlock(blockId: string, cursor: "start" | "end" = "start") {
+    window.setTimeout(() => {
+      const target = blockRefs.current[blockId];
+      target?.focus();
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement
+      ) {
+        const position = cursor === "end" ? target.value.length : 0;
+        target.setSelectionRange(position, position);
+      }
+    }, 0);
   }
 
   function focusImageAlt(blockId: string) {
@@ -574,9 +624,14 @@ export default function PostEditor() {
 
   function insertBlockAfter(
     blockId: string | null,
-    command: BlockCommand = blockCommands[0]
+    command: BlockCommand = blockCommands[0],
+    initialText = "",
+    shouldAnnounce = true
   ) {
-    const nextBlock = createBlock(command.type, command.level);
+    const nextBlock = {
+      ...createBlock(command.type, command.level),
+      text: initialText
+    };
     setBlocks((current) => {
       const fallbackIndex = current.length - 1;
       const index = blockId
@@ -590,7 +645,7 @@ export default function PostEditor() {
       ];
     });
     setFocusedBlockId(nextBlock.id);
-    announce(`${command.label} block added.`);
+    if (shouldAnnounce) announce(`${command.label} added.`);
     focusBlock(nextBlock.id);
   }
 
@@ -641,7 +696,12 @@ export default function PostEditor() {
     });
   }
 
-  function openBlockMenu(blockId: string) {
+  function openBlockMenu(
+    blockId: string,
+    returnFocusTarget?: HTMLElement | null
+  ) {
+    menuReturnFocusRefs.current[blockId] =
+      returnFocusTarget ?? blockRefs.current[blockId] ?? null;
     setOpenMenuBlockId(blockId);
     setActiveBlockTypeIndex(0);
     announce("Block inserter opened.");
@@ -649,14 +709,23 @@ export default function PostEditor() {
   }
 
   function closeBlockMenu(blockId: string) {
+    const returnTarget = menuReturnFocusRefs.current[blockId];
     setOpenMenuBlockId(null);
-    focusBlock(blockId);
+    window.setTimeout(() => {
+      if (returnTarget?.isConnected) {
+        returnTarget.focus();
+      } else {
+        blockRefs.current[blockId]?.focus();
+      }
+      menuReturnFocusRefs.current[blockId] = null;
+    }, 0);
   }
 
   function selectBlockType(blockId: string, command: BlockCommand) {
     updateBlock(blockId, { type: command.type, level: command.level });
     setOpenMenuBlockId(null);
     announce(`${command.label} selected.`);
+    menuReturnFocusRefs.current[blockId] = null;
     focusBlock(blockId);
   }
 
@@ -670,11 +739,12 @@ export default function PostEditor() {
     window.setTimeout(() => commandInputRef.current?.focus(), 0);
   }
 
-  function closeCommandPalette() {
+  function closeCommandPalette({ restoreFocus = true } = {}) {
     commandDialogRef.current?.close();
     setCommandOpen(false);
     setCommandQuery("");
     setCommandStatus("");
+    if (!restoreFocus) return;
     window.setTimeout(() => {
       if (commandReturnFocusRef.current?.isConnected) {
         commandReturnFocusRef.current.focus();
@@ -687,7 +757,7 @@ export default function PostEditor() {
   function runCommand(command: BlockCommand | undefined) {
     if (!command) return;
     insertBlockAfter(focusedBlockId ?? blocks[blocks.length - 1]?.id ?? null, command);
-    closeCommandPalette();
+    closeCommandPalette({ restoreFocus: false });
   }
 
   function onCommandDialogKeyDown(event: React.KeyboardEvent<HTMLDialogElement>) {
@@ -729,6 +799,14 @@ export default function PostEditor() {
           : 0
       );
     }
+    if (event.key === "Home" && filteredCommands.length > 0) {
+      event.preventDefault();
+      setActiveCommandIndex(0);
+    }
+    if (event.key === "End" && filteredCommands.length > 0) {
+      event.preventDefault();
+      setActiveCommandIndex(filteredCommands.length - 1);
+    }
     if (event.key === "Enter") {
       event.preventDefault();
       runCommand(activeCommand);
@@ -742,6 +820,43 @@ export default function PostEditor() {
     if (event.key === "/" && event.currentTarget.selectionStart === 0) {
       event.preventDefault();
       openBlockMenu(block.id);
+      return;
+    }
+
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      block.type !== "bulleted-list" &&
+      block.type !== "numbered-list"
+    ) {
+      event.preventDefault();
+      const target = event.currentTarget;
+      const before = target.value.slice(0, target.selectionStart);
+      const after = target.value.slice(target.selectionEnd);
+      updateBlock(block.id, { text: before });
+      insertBlockAfter(block.id, blockCommands[0], after, false);
+      return;
+    }
+
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+
+    const index = blocks.findIndex((item) => item.id === block.id);
+    const target = event.currentTarget;
+    const atStart = target.selectionStart === 0 && target.selectionEnd === 0;
+    const atEnd =
+      target.selectionStart === target.value.length &&
+      target.selectionEnd === target.value.length;
+
+    if (event.key === "ArrowUp" && atStart && index > 0) {
+      event.preventDefault();
+      focusBlock(blocks[index - 1].id, "end");
+    }
+    if (event.key === "ArrowDown" && atEnd && index < blocks.length - 1) {
+      event.preventDefault();
+      focusBlock(blocks[index + 1].id, "start");
     }
   }
 
@@ -776,9 +891,21 @@ export default function PostEditor() {
         (current) => (current - 1 + blockCommands.length) % blockCommands.length
       );
     }
-    if (event.key === "Enter") {
+    if (event.key === "Home") {
+      event.preventDefault();
+      setActiveBlockTypeIndex(0);
+    }
+    if (event.key === "End") {
+      event.preventDefault();
+      setActiveBlockTypeIndex(blockCommands.length - 1);
+    }
+    if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       selectBlockType(blockId, blockCommands[activeBlockTypeIndex]);
+    }
+    if (event.key === "Tab") {
+      setOpenMenuBlockId(null);
+      menuReturnFocusRefs.current[blockId] = null;
     }
     if (event.key === "Escape") {
       event.preventDefault();
@@ -798,7 +925,8 @@ export default function PostEditor() {
         return {
           blockId: block.id,
           field: "image-alt" as const,
-          message: `Block ${index + 1} is an image without alt text. Add an image description before saving.`
+          message:
+            "An image block is missing alt text. Add an image description before saving."
         };
       }
 
@@ -810,7 +938,7 @@ export default function PostEditor() {
           blockId: block.id,
           field: "content" as const,
           message:
-            `Block ${index + 1} is an H1. The post title is already the page H1, so body headings must start at H2.`
+            "Body headings must start at H2 because the post title is already the page H1."
         };
       }
       if (level > previousHeadingLevel + 1) {
@@ -818,7 +946,7 @@ export default function PostEditor() {
           blockId: block.id,
           field: "content" as const,
           message:
-            `Block ${index + 1} skips from H${previousHeadingLevel} to H${level}. Use H${previousHeadingLevel + 1} or a lower heading level before saving.`
+            `This heading skips from H${previousHeadingLevel} to H${level}. Use H${previousHeadingLevel + 1} or a lower heading level before saving.`
         };
       }
       previousHeadingLevel = level;
@@ -839,6 +967,7 @@ export default function PostEditor() {
   function removeFeatured() {
     setFeaturedUrl("");
     setFeaturedAlt("");
+    setFeaturedDecorative(false);
     if (invalidField === "alt") setInvalidField(null);
   }
 
@@ -849,6 +978,7 @@ export default function PostEditor() {
     setError("");
     try {
       setFeaturedUrl(await uploadImage(file));
+      setFeaturedDecorative(false);
       announce("Featured image uploaded.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Image upload failed.");
@@ -909,10 +1039,10 @@ export default function PostEditor() {
       }
       return;
     }
-    if (featuredUrl && !featuredAlt.trim()) {
+    if (featuredUrl && !featuredDecorative && !featuredAlt.trim()) {
       fail(
         "alt",
-        "Please describe the featured image (alt text) so it is accessible."
+        "Please describe the featured image, or mark it as decorative."
       );
       return;
     }
@@ -923,7 +1053,8 @@ export default function PostEditor() {
         title,
         html: blocksToHtml(blocks),
         featuredImageUrl: featuredUrl || null,
-        featuredImageAlt: featuredAlt || null,
+        featuredImageAlt: featuredDecorative ? "" : featuredAlt || null,
+        categoryIds: selectedCategoryId ? [Number(selectedCategoryId)] : [],
         status
       });
     } catch (err) {
@@ -961,7 +1092,7 @@ export default function PostEditor() {
             <img
               src={featuredUrl}
               alt={featuredAlt || ""}
-              className="max-h-48 rounded-md border border-border"
+              className="max-h-48 rounded-md border border-[#767676]"
             />
           ) : null}
           <div>
@@ -987,17 +1118,33 @@ export default function PostEditor() {
                 <label htmlFor={altId} className="block text-sm font-semibold">
                   Image description (alt text)
                 </label>
-                <input
-                  id={altId}
-                  ref={altRef}
-                  value={featuredAlt}
-                  onChange={(e) => setFeaturedAlt(e.target.value)}
-                  aria-invalid={invalidField === "alt" || undefined}
-                  aria-describedby={invalidField === "alt" ? errorId : undefined}
+              <input
+                id={altId}
+                ref={altRef}
+                value={featuredAlt}
+                disabled={featuredDecorative}
+                onChange={(e) => setFeaturedAlt(e.target.value)}
+                aria-invalid={invalidField === "alt" || undefined}
+                aria-describedby={invalidField === "alt" ? errorId : undefined}
                   className="mt-1 w-full rounded-md border border-[#6b6b6b] bg-white px-3 py-2 text-[#222222] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
-                  placeholder="Describe what the image shows"
-                />
-              </div>
+                placeholder="Describe what the image shows"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={featuredDecorative}
+                onChange={(event) => {
+                  setFeaturedDecorative(event.target.checked);
+                  if (event.target.checked) {
+                    setFeaturedAlt("");
+                    if (invalidField === "alt") setInvalidField(null);
+                  }
+                }}
+                className="h-4 w-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+              />
+              This featured image is decorative
+            </label>
               <button
                 type="button"
                 onClick={removeFeatured}
@@ -1027,17 +1174,12 @@ export default function PostEditor() {
           </button>
         </div>
         <p id={bodyHelpId} className="sr-only">
-          Type slash at the start of a block to open block choices. Use Up and
-          Down arrows to review choices, Enter to select, and Escape to close.
-          Use Command K or Control K to open the command palette. The post
-          title is the page H1, so body H1 blocks cannot be saved.
+          Type slash at the start of a block to open block choices. Press Enter
+          to start a new paragraph block. Use Up and Down arrow at the start or
+          end of a block to move between blocks. Use Command K or Control K to
+          open the command palette.
         </p>
-        <div
-          role="group"
-          aria-labelledby={bodyHeadingId}
-          aria-describedby={bodyHelpId}
-          className="mt-3 space-y-4"
-        >
+        <div className="mt-3 space-y-4">
           {blocks.map((block, index) => {
             const blockId = `${baseId}-block-${block.id}`;
             const menuId = `${blockId}-menu`;
@@ -1046,6 +1188,7 @@ export default function PostEditor() {
             const imageFileId = `${blockId}-image-file`;
             const imageAltId = `${blockId}-image-alt`;
             const captionId = `${blockId}-caption`;
+            const blockPosition = `${blockLabel(block).toLowerCase()} block ${index + 1} of ${blocks.length}`;
             return (
               <div
                 key={block.id}
@@ -1053,12 +1196,15 @@ export default function PostEditor() {
               >
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-[#222222]">
-                    Block {index + 1}, {blockLabel(block)}
+                    {blockLabel(block)}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => openBlockMenu(block.id)}
+                      onClick={(event) =>
+                        openBlockMenu(block.id, event.currentTarget)
+                      }
+                      aria-label={`Change type for ${blockPosition}`}
                       aria-haspopup="listbox"
                       aria-expanded={openMenuBlockId === block.id}
                       aria-controls={openMenuBlockId === block.id ? menuId : undefined}
@@ -1069,6 +1215,7 @@ export default function PostEditor() {
                     <button
                       type="button"
                       onClick={() => insertBlockAfter(block.id)}
+                      aria-label={`Add block after ${blockPosition}`}
                       className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
                     >
                       Add block
@@ -1077,6 +1224,7 @@ export default function PostEditor() {
                       type="button"
                       onClick={() => moveBlock(block.id, -1)}
                       disabled={index === 0}
+                      aria-label={`Move ${blockPosition} up`}
                       className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
                     >
                       Move up
@@ -1085,6 +1233,7 @@ export default function PostEditor() {
                       type="button"
                       onClick={() => moveBlock(block.id, 1)}
                       disabled={index === blocks.length - 1}
+                      aria-label={`Move ${blockPosition} down`}
                       className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
                     >
                       Move down
@@ -1092,6 +1241,7 @@ export default function PostEditor() {
                     <button
                       type="button"
                       onClick={() => removeBlock(block.id)}
+                      aria-label={`Remove ${blockPosition}`}
                       className="rounded-md border border-[#6b6b6b] px-2.5 py-1 text-sm font-medium hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
                     >
                       Remove
@@ -1225,17 +1375,17 @@ export default function PostEditor() {
                           }
                           className="mt-1 rounded-md border border-[#6b6b6b] bg-white px-3 py-2 text-[#222222] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
                         >
-                          {[1, 2, 3, 4, 5, 6].map((level) => (
+                          {[2, 3, 4, 5, 6].map((level) => (
                             <option key={level} value={level}>
                               H{level}
-                              {level === 1 ? " (blocked in body)" : ""}
                             </option>
                           ))}
                         </select>
                       </div>
                     ) : null}
                     <label htmlFor={blockId} className="sr-only">
-                      Block {index + 1}, {blockLabel(block)} content
+                      {blockLabel(block)} content, block {index + 1} of{" "}
+                      {blocks.length}
                     </label>
                     <textarea
                       id={blockId}
@@ -1268,7 +1418,7 @@ export default function PostEditor() {
                     }}
                     role="listbox"
                     tabIndex={0}
-                    aria-label={`Choose type for block ${index + 1}`}
+                    aria-label={`Choose type for ${blockLabel(block).toLowerCase()} block ${index + 1} of ${blocks.length}`}
                     aria-activedescendant={activeOptionId}
                     onKeyDown={(e) => onMenuKeyDown(e, block.id)}
                     className="mt-2 rounded-md border border-[#6b6b6b] bg-white p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
@@ -1298,32 +1448,66 @@ export default function PostEditor() {
       </div>
 
       <div className="wp-article space-y-4">
-        <fieldset>
-          <legend className="text-sm font-semibold">Status</legend>
-          <div className="mt-2 flex flex-wrap gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="post-status"
-                checked={status === "draft"}
-                onChange={() => setStatus("draft")}
-              />
+        <div>
+          <label htmlFor={categoryId} className="block text-sm font-semibold">
+            Category
+          </label>
+          <select
+            id={categoryId}
+            value={selectedCategoryId}
+            onChange={(event) => setSelectedCategoryId(event.target.value)}
+            className="mt-1 w-full rounded-md border border-[#6b6b6b] bg-white px-3 py-2 text-[#222222] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
+          >
+            <option value="">No category selected</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <p className="text-sm font-semibold">Status</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              aria-pressed={status === "draft"}
+              onClick={() => setStatus("draft")}
+              className={`rounded-md border px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2 ${
+                status === "draft"
+                  ? "border-[#0066bf] bg-[#0066bf] text-white"
+                  : "border-[#6b6b6b] bg-white text-[#222222] hover:bg-slate-100"
+              }`}
+            >
               Save as draft
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="post-status"
-                checked={status === "published"}
-                onChange={() => setStatus("published")}
-              />
+            </button>
+            <button
+              type="button"
+              aria-pressed={status === "published"}
+              onClick={() => setStatus("published")}
+              className={`rounded-md border px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2 ${
+                status === "published"
+                  ? "border-[#0066bf] bg-[#0066bf] text-white"
+                  : "border-[#6b6b6b] bg-white text-[#222222] hover:bg-slate-100"
+              }`}
+            >
               Publish now
-            </label>
+            </button>
           </div>
-        </fieldset>
+        </div>
 
         <p id={statusId} role="status" aria-live="polite" className="sr-only">
           {liveMessage}
+        </p>
+        <p
+          id={commandStatusId}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+        >
+          {commandStatus}
         </p>
 
         <div
@@ -1348,6 +1532,7 @@ export default function PostEditor() {
           <dialog
             id={commandDialogId}
             ref={commandDialogRef}
+            aria-modal="true"
             aria-labelledby={commandTitleId}
             onKeyDown={onCommandDialogKeyDown}
             onCancel={(event) => {
@@ -1362,7 +1547,7 @@ export default function PostEditor() {
               </h2>
               <button
                 type="button"
-                onClick={closeCommandPalette}
+                onClick={() => closeCommandPalette()}
                 className="rounded-md border border-[#6b6b6b] px-3 py-1.5 text-sm font-semibold hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
               >
                 Close
@@ -1380,15 +1565,13 @@ export default function PostEditor() {
               aria-expanded={filteredCommands.length > 0}
               aria-autocomplete="list"
               aria-controls={filteredCommands.length > 0 ? commandListId : undefined}
+              aria-describedby={commandStatusId}
               aria-activedescendant={
                 activeCommand ? `${commandListId}-option-${safeActiveCommandIndex}` : undefined
               }
               aria-label="Search commands"
               className="mt-4 w-full rounded-md border border-[#6b6b6b] px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
             />
-            <p role="status" aria-live="polite" className="sr-only">
-              {commandStatus}
-            </p>
             {filteredCommands.length > 0 ? (
               <div
                 id={commandListId}

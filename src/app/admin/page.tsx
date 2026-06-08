@@ -1,10 +1,18 @@
 import Link from "next/link";
 import { count, eq } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
-import { blogPosts, directoryEntries } from "@/db/schema";
+import {
+  blogPosts,
+  directoryEntries,
+  podcastEpisodes,
+  users
+} from "@/db/schema";
 import { canAdmin, getCurrentAppUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "Admin dashboard"
+};
 
 async function pendingCount(table: typeof blogPosts | typeof directoryEntries) {
   if (!hasDatabase || !db) return 0;
@@ -15,28 +23,155 @@ async function pendingCount(table: typeof blogPosts | typeof directoryEntries) {
   return row?.value ?? 0;
 }
 
+async function countAll(
+  table: typeof users | typeof blogPosts | typeof directoryEntries | typeof podcastEpisodes
+) {
+  if (!hasDatabase || !db) return 0;
+  const [row] = await db.select({ value: count() }).from(table);
+  return row?.value ?? 0;
+}
+
+async function userRoleCount(role: "admin" | "moderator" | "member") {
+  if (!hasDatabase || !db) return 0;
+  const [row] = await db
+    .select({ value: count() })
+    .from(users)
+    .where(eq(users.role, role));
+  return row?.value ?? 0;
+}
+
+async function postStatusCount(status: "draft" | "pending" | "published") {
+  if (!hasDatabase || !db) return 0;
+  const [row] = await db
+    .select({ value: count() })
+    .from(blogPosts)
+    .where(eq(blogPosts.status, status));
+  return row?.value ?? 0;
+}
+
+async function directoryStatusCount(
+  status: "pending" | "approved" | "rejected"
+) {
+  if (!hasDatabase || !db) return 0;
+  const [row] = await db
+    .select({ value: count() })
+    .from(directoryEntries)
+    .where(eq(directoryEntries.status, status));
+  return row?.value ?? 0;
+}
+
+function DashboardStat({
+  label,
+  value,
+  detail,
+  href
+}: {
+  label: string;
+  value: number;
+  detail: string;
+  href?: string;
+}) {
+  const content = (
+    <>
+      <span className="text-sm font-semibold uppercase text-[#595959]">
+        {label}
+      </span>
+      <span className="mt-3 block text-3xl font-bold text-[#222222]">
+        {value.toLocaleString()}
+      </span>
+      <span className="mt-1 block text-sm text-[#595959]">{detail}</span>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="block rounded-lg border border-[#767676] bg-white p-5 no-underline shadow-wordpress hover:border-[#0f6cba] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+      >
+        {content}
+        <span className="mt-3 block text-sm font-semibold text-[#0f6cba] underline">
+          Open {label.toLowerCase()}
+        </span>
+      </Link>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-[#767676] bg-white p-5 shadow-wordpress">
+      {content}
+    </div>
+  );
+}
+
 export default async function AdminDashboard() {
   const user = await getCurrentAppUser();
   const isAdmin = canAdmin(user?.role);
 
-  const [pendingPosts, pendingDirectory] = await Promise.all([
+  const [
+    pendingPosts,
+    pendingDirectory,
+    totalUsers,
+    adminUsers,
+    moderatorUsers,
+    memberUsers,
+    totalPosts,
+    publishedPosts,
+    approvedDirectory,
+    totalEpisodes
+  ] = await Promise.all([
     pendingCount(blogPosts),
-    pendingCount(directoryEntries)
+    pendingCount(directoryEntries),
+    countAll(users),
+    userRoleCount("admin"),
+    userRoleCount("moderator"),
+    userRoleCount("member"),
+    countAll(blogPosts),
+    postStatusCount("published"),
+    directoryStatusCount("approved"),
+    countAll(podcastEpisodes)
   ]);
   const pendingTotal = pendingPosts + pendingDirectory;
 
   return (
     <div className="space-y-8">
-      <section className="wp-article">
+      <div className="wp-article">
         <h1 className="text-3xl font-bold">Admin dashboard</h1>
         <p className="mt-3 text-[#595959]">
-          {isAdmin
-            ? "You have full administrator access."
-            : "You have moderator access: you can review and decide on pending submissions."}
+          Overview of site content, submissions, users, and publishing tools.
         </p>
-      </section>
+      </div>
 
-      <section className="wp-article" aria-labelledby="dashboard-review-heading">
+      <div>
+        <h2 className="mb-4 text-2xl font-semibold">Overview</h2>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <DashboardStat
+            label="Users"
+            value={totalUsers}
+            detail={`${adminUsers} admin, ${moderatorUsers} moderator, ${memberUsers} member`}
+            href={isAdmin ? "/admin/users" : undefined}
+          />
+          <DashboardStat
+            label="Pending review"
+            value={pendingTotal}
+            detail={`${pendingPosts} report posts, ${pendingDirectory} directory entries`}
+            href="/admin/review"
+          />
+          <DashboardStat
+            label="Published posts"
+            value={publishedPosts}
+            detail={`${totalPosts} posts total`}
+            href={isAdmin ? "/admin/posts" : undefined}
+          />
+          <DashboardStat
+            label="Directory apps"
+            value={approvedDirectory}
+            detail="Approved directory entries"
+          />
+        </div>
+      </div>
+
+      <div className="wp-article">
         <h2 id="dashboard-review-heading" className="text-2xl font-semibold">
           Review queue
         </h2>
@@ -53,26 +188,36 @@ export default async function AdminDashboard() {
             Open the review queue
           </Link>
         </p>
-      </section>
+      </div>
 
       {isAdmin ? (
-        <section className="wp-article" aria-labelledby="dashboard-admin-heading">
+        <div className="wp-article">
           <h2 id="dashboard-admin-heading" className="text-2xl font-semibold">
             Content management
           </h2>
           <p className="mt-2 text-[#222222]">
-            Create and manage blog posts with an accessible editor.
+            Create posts, manage users, and keep the platform content current.
           </p>
-          <p className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-3">
             <Link
               href="/admin/posts"
               className="inline-flex rounded-md bg-[#0066bf] px-4 py-2 font-semibold text-white no-underline hover:bg-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
             >
               Manage posts
             </Link>
-          </p>
-        </section>
+            <Link
+              href="/admin/users"
+              className="inline-flex rounded-md border border-[#0066bf] px-4 py-2 font-semibold text-[#0f6cba] no-underline hover:bg-[#eef3f8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
+            >
+              Manage users
+            </Link>
+          </div>
+        </div>
       ) : null}
+
+      <p className="text-sm text-[#595959]">
+        Podcast episodes imported: {totalEpisodes.toLocaleString()}.
+      </p>
     </div>
   );
 }

@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { inArray } from "drizzle-orm";
 import { db, hasDatabase } from "@/db";
-import { blogPosts } from "@/db/schema";
+import { blogCategories, blogPosts, postCategories } from "@/db/schema";
 import { canAdmin, getCurrentAppUser } from "@/lib/auth/server";
 import { postToSocialMedia } from "@/lib/social";
 import { absoluteUrl, slugify, stripHtml } from "@/lib/utils";
@@ -12,6 +13,7 @@ export type CreatePostInput = {
   html: string;
   featuredImageUrl?: string | null;
   featuredImageAlt?: string | null;
+  categoryIds?: number[];
   status: "draft" | "published";
 };
 
@@ -29,6 +31,20 @@ export async function createPost(input: CreatePostInput) {
   const html = input.html?.trim() || "<p></p>";
   const excerpt = stripHtml(html).slice(0, 240);
   const slug = `${slugify(title)}-${Date.now()}`;
+  const requestedCategoryIds = Array.from(
+    new Set(
+      (input.categoryIds ?? []).filter(
+        (id) => Number.isInteger(id) && id > 0
+      )
+    )
+  );
+  const validCategoryIds =
+    requestedCategoryIds.length > 0
+      ? await db
+          .select({ id: blogCategories.id })
+          .from(blogCategories)
+          .where(inArray(blogCategories.id, requestedCategoryIds))
+      : [];
 
   const [post] = await db
     .insert(blogPosts)
@@ -38,12 +54,21 @@ export async function createPost(input: CreatePostInput) {
       body: html,
       excerpt,
       featuredImageUrl: input.featuredImageUrl || null,
-      featuredImageAlt: input.featuredImageAlt || null,
+      featuredImageAlt: input.featuredImageAlt ?? null,
       status,
       publishedAt: status === "published" ? new Date() : null,
       authorId: user.id
     })
     .returning();
+
+  if (post && validCategoryIds.length > 0) {
+    await db.insert(postCategories).values(
+      validCategoryIds.map((category) => ({
+        postId: post.id,
+        categoryId: category.id
+      }))
+    );
+  }
 
   if (status === "published" && post) {
     void postToSocialMedia({

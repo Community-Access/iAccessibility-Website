@@ -1,5 +1,15 @@
+import {
+  cloneElement,
+  isValidElement,
+  type ReactNode
+} from "react";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+
+type FieldControlProps = {
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean | "true" | "false";
+};
 
 type FormFieldProps = {
   id: string;
@@ -8,7 +18,7 @@ type FormFieldProps = {
   error?: string;
   required?: boolean;
   className?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 export function FormField({
@@ -22,6 +32,18 @@ export function FormField({
 }: FormFieldProps) {
   const descriptionId = description ? `${id}-description` : undefined;
   const errorId = error ? `${id}-error` : undefined;
+  const describedBy = [descriptionId, errorId].filter(Boolean).join(" ");
+  const fieldControl = isValidElement<FieldControlProps>(children)
+    ? cloneElement(children, {
+        "aria-describedby": [
+          children.props["aria-describedby"],
+          describedBy
+        ]
+          .filter(Boolean)
+          .join(" ") || undefined,
+        "aria-invalid": error ? true : children.props["aria-invalid"]
+      })
+    : children;
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -34,7 +56,7 @@ export function FormField({
           {description}
         </p>
       ) : null}
-      {children}
+      {fieldControl}
       {error ? (
         <p id={errorId} className="text-sm font-medium text-destructive">
           {error}

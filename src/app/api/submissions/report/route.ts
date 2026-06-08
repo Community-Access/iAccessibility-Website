@@ -6,11 +6,19 @@ import { canModerate, getCurrentAppUser } from "@/lib/auth/server";
 import { notifyAdminSubmission, sendSubmissionReceived } from "@/lib/email/client";
 import { postToSocialMedia } from "@/lib/social";
 import { uploadSubmissionFile } from "@/lib/storage/spaces";
-import { absoluteUrl, paragraphsFromText, slugify, stripHtml } from "@/lib/utils";
+import {
+  absoluteUrl,
+  escapeHtml,
+  paragraphsFromText,
+  slugify,
+  stripHtml
+} from "@/lib/utils";
 
 const schema = z.object({
   title: z.string().optional(),
-  content: z.string().min(1)
+  content: z.string().min(1),
+  imageAlt: z.string().optional(),
+  imageDecorative: z.boolean().optional()
 });
 
 function value(formData: FormData, key: string) {
@@ -38,7 +46,9 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const parsed = schema.safeParse({
     title: value(formData, "title"),
-    content: value(formData, "content")
+    content: value(formData, "content"),
+    imageAlt: value(formData, "imageAlt"),
+    imageDecorative: value(formData, "imageDecorative") === "true"
   });
 
   if (!parsed.success) {
@@ -51,8 +61,19 @@ export async function POST(request: Request) {
   const image = formData.get("image");
   let imageHtml = "";
   if (image instanceof File && image.size > 0) {
+    if (!parsed.data.imageDecorative && !parsed.data.imageAlt?.trim()) {
+      return NextResponse.json(
+        {
+          error:
+            "Add an image description, or mark the uploaded image as decorative."
+        },
+        { status: 400 }
+      );
+    }
     const upload = await uploadSubmissionFile(image, "report-images");
-    imageHtml = `<figure><img src="${upload.url}" alt=""><figcaption>Submitted image</figcaption></figure>`;
+    imageHtml = `<figure><img src="${escapeHtml(upload.url)}" alt="${escapeHtml(
+      parsed.data.imageDecorative ? "" : (parsed.data.imageAlt ?? "")
+    )}"></figure>`;
   }
 
   const plainContent = parsed.data.content;

@@ -7,7 +7,8 @@ import { AdminNav, type AdminSection } from "./admin-nav";
 const ALL_SECTIONS: Array<AdminSection & { adminOnly: boolean }> = [
   { href: "/admin", label: "Dashboard", adminOnly: false },
   { href: "/admin/review", label: "Review queue", adminOnly: false },
-  { href: "/admin/posts", label: "Posts", adminOnly: true }
+  { href: "/admin/posts", label: "Posts", adminOnly: true },
+  { href: "/admin/users", label: "Users", adminOnly: true }
 ];
 
 export default async function AdminLayout({

@@ -14,7 +14,10 @@ export function CookieConsent() {
   const preferencesButtonRef = useRef<HTMLButtonElement>(null);
   const shouldReturnFocusRef = useRef(false);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (visible && shouldReturnFocusRef.current) {
@@ -25,8 +28,11 @@ export function CookieConsent() {
   useEffect(() => {
     const saved = window.localStorage.getItem(COOKIE_KEY);
     if (!saved) {
-      setVisible(true);
-      setAnnouncement("Cookie consent banner shown.");
+      const timer = window.setTimeout(() => {
+        setVisible(true);
+        setAnnouncement("Cookie consent banner shown.");
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, []);
 
@@ -62,9 +68,8 @@ export function CookieConsent() {
     setAnnouncement("Cookie preferences reopened.");
   }
 
-  // The banner and its live region are portaled to <body> so they are NOT
-  // nested inside the footer's contentinfo landmark. The banner is a single,
-  // purposefully-labelled top-level region (the standard cookie-notice pattern).
+  // The banner and its live region are portaled to <body> so they are not
+  // nested inside the footer's contentinfo landmark.
   const overlay = (
     <>
       <div className="sr-only" role="status" aria-live="polite">
@@ -72,9 +77,7 @@ export function CookieConsent() {
       </div>
       {visible ? (
         <div
-          role="region"
-          aria-label="Cookie consent"
-          className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background p-4 shadow-lg"
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-[#767676] bg-background p-4 shadow-lg"
         >
           <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-foreground">

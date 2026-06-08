@@ -144,14 +144,14 @@ export default async function EpisodePage({
         ) : null}
 
         {episode.bodyHtml ? (
-          <section aria-label="Show notes">
+          <div>
             <div
               className="wp-prose"
               dangerouslySetInnerHTML={{
                 __html: normalizeEmbeddedHeadings(episode.bodyHtml)
               }}
             />
-          </section>
+          </div>
         ) : null}
       </div>
     </article>
