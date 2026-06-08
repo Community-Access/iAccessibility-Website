@@ -62,6 +62,27 @@ Status key: ☐ todo · ◐ in progress · ☑ done · ❓ needs scoping
 - ☐ Add a PODCASTS admin section to view/manage the 579 imported episodes
   (edit episodes; future: podcast network, RSS feed management).
 
+## User menu / submissions (added 2026-06-07 PM)
+- ☐ User menu only has "Submit App". Add ways to submit BLOG POSTS and PODCASTS
+  too, so everything is submittable from the menu. NEEDS ROUTES: apps =
+  /app-directory/submit (exists); blog post ≈ /report (ReportSubmissionForm,
+  exists) — confirm wording/intent; podcast = NO route yet (audio-submission-form
+  exists but is not wired to a page) → needs a submit-a-podcast page/flow.
+
+## Round 2 status (2026-06-07 PM)
+- ☑ Content management copy reworded to "Write, edit, and publish blog posts."
+- ◐ "enter the post body" command-palette bug: ROOT CAUSE = the Title is a
+  single-line <input> in the form, so Enter submitted the form and fired the
+  body-empty validation. Fix in progress: Title Enter → move focus into a blank
+  body block (also fixes "Enter jumps to first paragraph"). Pending lead sign-off.
+- ☐ ROLE CHANGE: verified the updateUserRole server action is correct (validates,
+  writes, revalidates /admin + /admin/users, blocks self-demotion, announces
+  success/error). If it's visibly failing, need the exact symptom — otherwise the
+  ask is likely the Users-table actions-list rework (Start-testing pattern).
+- ☑ DEPLOY CONFIRMED: DO active deployment = commit 5ecc32b; production has the
+  batch-1 changes live (WhatsApp removed). "Same bugs" = unfixed editor-behavior
+  batch + cached browser tabs (hard-refresh).
+
 ## Notes
 - Editor = BlockNote (@blocknote/*). Several items (select-all, blank-block on
   Enter, block-options-on-blur, command palette ARIA) are BlockNote behavior/

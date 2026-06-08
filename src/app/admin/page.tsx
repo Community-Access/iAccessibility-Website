@@ -196,7 +196,7 @@ export default async function AdminDashboard() {
             Content management
           </h2>
           <p className="mt-2 text-[#222222]">
-            Create posts and keep the platform content current.
+            Write, edit, and publish blog posts.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Link

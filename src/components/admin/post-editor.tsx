@@ -1076,6 +1076,26 @@ export default function PostEditor({
             ref={titleRef}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              // Plain Enter in the single-line title must NOT submit the form
+              // (that fired the "enter the post body" validation). Instead move
+              // focus into the body — a blank first block on a new post.
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.metaKey &&
+                !e.ctrlKey &&
+                !e.altKey
+              ) {
+                e.preventDefault();
+                const first = blocks[0];
+                if (first) {
+                  focusBlock(first.id, "start");
+                } else {
+                  insertBlockAfter(null, blockCommands[0], "", false);
+                }
+              }
+            }}
             required
             aria-invalid={invalidField === "title" || undefined}
             aria-describedby={invalidField === "title" ? errorId : undefined}
