@@ -20,8 +20,10 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 0 70% 42%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 80%;
-    --input: 0 0% 80%;
+    /* 46% (#767676) clears WCAG 1.4.11 (3:1 non-text) on both #fff cards and
+       the #f5f5f5 page background; load-bearing borders/inputs need this. */
+    --border: 0 0% 46%;
+    --input: 0 0% 46%;
     --ring: 207 96% 32%;
     --radius: 0.5rem;
   }

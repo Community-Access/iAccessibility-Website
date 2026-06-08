@@ -2,6 +2,57 @@
 
 Last updated: 2026-06-07
 
+## Shared accessible UI primitives ported from Start-testing (2026-06-07)
+
+Brought over the proven-accessible reusable `ui/` primitives from
+`/Users/taylorarndt/developer/Start-testing`, re-themed from that app's dark
+palette to the iAccessibility light design tokens. The accessibility-lead
+reviewed the dark→light re-theme first (main risk = contrast on translucent
+fills). New/updated files under `src/components/ui/`:
+
+- `badge.tsx` — generic `Badge` + config-driven `StatusBadge`. Light tints with
+  dark saturated text (≥4.5:1); a text label is always required (no color-only).
+  Replaces Start-testing's product-coupled badge (bugs/features `item-config`).
+- `empty-state.tsx` — `EmptyState` (decorative icon `aria-hidden`, configurable
+  heading level) + `EmptyStateInline`.
+- `error-alert.tsx` — `ErrorAlert` (role=alert, assertive, focusable/autofocus),
+  `FieldError` (role=alert, for `aria-describedby`), `SuccessAlert` (role=status,
+  polite). Dark translucent fills replaced with `#fdeaea/#8a1414`,
+  `#e7f5ec/#1a6b38` solid tints.
+- `modal.tsx` — native `<dialog>` + `showModal()`, focus return (guards removed
+  trigger), Tab trap, Escape via `cancel`, body scroll lock, padded close button.
+- `tabs.tsx` — Radix tabs wrapper (`@radix-ui/react-tabs`, already a dep), active
+  state differs by underline+weight+color (not hue alone).
+- `breadcrumb.tsx` — `nav[aria-label="Breadcrumb"] > ol`, current page is plain
+  `aria-current` text, route labels re-mapped to this site's routes.
+- `item-table.tsx` — upgraded to source parity: skip-to-top/bottom links (targets
+  have `tabindex=-1`), loading state (role=status, `motion-safe:animate-spin`),
+  `srOnly` + `width` column options. Kept as a Server Component; load-bearing
+  gridline borders stay `#767676` (token `--border` #cccccc is too light).
+
+Toast (ported 2026-06-07): added `@radix-ui/react-toast` dependency, plus
+`src/hooks/use-toast.tsx`, `src/components/ui/toast.tsx`,
+`src/components/ui/toaster.tsx`, and mounted `<Toaster>` persistently inside the
+client `Providers` (so the live region exists before any message — WCAG 4.1.3).
+- Hook is CONTROLLED: Radix drives the auto-dismiss timer (pauses on hover/focus,
+  WCAG 2.2.1) — no blind `setTimeout`. `open` toggles via `onOpenChange`.
+- error → `type="foreground"` (assertive) + `duration={Infinity}` (persistent,
+  never auto-dismiss an actionable message); success/warning/default →
+  `type="background"` (polite) + 5s.
+- Variant fills match the alert tints; each variant has a leading icon
+  (aria-hidden) as a non-color signal (WCAG 1.4.1).
+
+Global token change (2026-06-07): `--border` and `--input` darkened from
+0 0% 80% (#cccccc, ~1.6:1) to 0 0% 46% (#767676) so load-bearing borders/inputs
+clear WCAG 1.4.11 (3:1) on both #fff and the #f5f5f5 page background. The
+`* { @apply border-border }` base rule only sets border-color, so this changes
+only borders that already have width — no new outlines. Audited all
+`border-border`/`border-input` usages: all load-bearing (cards, inputs, menus,
+separators), no faint-divider regressions.
+
+`npx tsc --noEmit` passes; existing `ItemTable` callers (admin posts/review/users)
+are unaffected (API is backward-compatible).
+
 ## Current baseline
 
 - Treat the current repository state as the source of truth. Do not restore the old
