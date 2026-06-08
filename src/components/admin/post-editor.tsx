@@ -1084,8 +1084,13 @@ export default function PostEditor({
         </div>
 
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold">
-            Featured image (optional)
+          <legend>
+            <h2
+              id="featured-image-heading"
+              className="text-sm font-semibold"
+            >
+              Featured image (optional)
+            </h2>
           </legend>
           {featuredUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -1165,12 +1170,20 @@ export default function PostEditor({
           <button
             type="button"
             onClick={openCommandPalette}
-            aria-haspopup="dialog"
             aria-expanded={commandOpen}
-            aria-controls={commandOpen ? commandDialogId : undefined}
-            className="rounded-md border border-[#6b6b6b] px-3 py-2 text-sm font-semibold hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
+            aria-keyshortcuts="Meta+K Control+K"
+            className="inline-flex items-center gap-2 rounded-md border border-[#6b6b6b] px-3 py-2 text-sm font-semibold hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf]"
           >
             Command palette
+            {/* Spoken name becomes "Command palette, Command K"; the visible
+                ⌘K glyph is hidden from AT so it isn't read awkwardly. */}
+            <span className="sr-only">, Command K</span>
+            <kbd
+              aria-hidden="true"
+              className="rounded border border-[#6b6b6b] bg-slate-100 px-1.5 py-0.5 font-sans text-xs font-medium text-[#595959]"
+            >
+              ⌘K
+            </kbd>
           </button>
         </div>
         <p id={bodyHelpId} className="sr-only">

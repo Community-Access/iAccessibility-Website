@@ -129,10 +129,6 @@ export default async function AdminUsersPage() {
     <div className="space-y-8">
       <div className="wp-article">
         <h1 className="text-3xl font-bold">Users</h1>
-        <p className="mt-3 text-[#595959]">
-          Review accounts and update access roles for the iAccessibility admin
-          area.
-        </p>
       </div>
 
       <div>
@@ -147,10 +143,10 @@ export default async function AdminUsersPage() {
 
       <div className="wp-article">
         <h2 id="users-table-heading" className="mb-4 text-2xl font-semibold">
-          Recent users
+          All users
         </h2>
         <ItemTable
-          caption="Recent users"
+          caption="All users"
           headingId="recent-users-table"
           columns={columns}
           items={rows}

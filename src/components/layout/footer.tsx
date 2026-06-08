@@ -4,21 +4,14 @@ import { CookieConsent } from "@/components/providers/cookie-consent";
 const SOCIAL_LINKS = [
   { label: "Mastodon", href: "https://iaccessibility.social/@iaccessibility" },
   { label: "X", href: "https://x.com/iaccessibility1" },
-  { label: "Facebook", href: "https://www.facebook.com/iaccessibility" },
-  {
-    label: "WhatsApp",
-    href: "https://chat.whatsapp.com/K737mm3fwOg1EmCNehipoK"
-  }
+  { label: "Facebook", href: "https://www.facebook.com/iaccessibility" }
 ];
 
 export function Footer() {
   return (
     <footer className="mt-10 bg-[#55555e] text-white" aria-label="Site">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 py-8 text-center">
-        <ul
-          className="flex flex-wrap items-center justify-center gap-2"
-          aria-label="Social links"
-        >
+        <ul className="flex flex-wrap items-center justify-center gap-2">
           {SOCIAL_LINKS.map((social) => (
             <li key={social.label}>
               <a

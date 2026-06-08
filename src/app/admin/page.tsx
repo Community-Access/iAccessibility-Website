@@ -148,7 +148,7 @@ export default async function AdminDashboard() {
           <DashboardStat
             label="Users"
             value={totalUsers}
-            detail={`${adminUsers} admin, ${moderatorUsers} moderator, ${memberUsers} member`}
+            detail={`${adminUsers} ${adminUsers === 1 ? "admin" : "admins"}, ${moderatorUsers} ${moderatorUsers === 1 ? "moderator" : "moderators"}, ${memberUsers} ${memberUsers === 1 ? "member" : "members"}`}
             href={isAdmin ? "/admin/users" : undefined}
           />
           <DashboardStat
@@ -173,7 +173,7 @@ export default async function AdminDashboard() {
 
       <div className="wp-article">
         <h2 id="dashboard-review-heading" className="text-2xl font-semibold">
-          Review queue
+          Pending review
         </h2>
         <p className="mt-2 text-[#222222]">
           {pendingTotal === 0
@@ -185,7 +185,7 @@ export default async function AdminDashboard() {
             href="/admin/review"
             className="inline-flex rounded-md bg-[#0066bf] px-4 py-2 font-semibold text-white no-underline hover:bg-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
           >
-            Open the review queue
+            Open pending review
           </Link>
         </p>
       </div>
@@ -196,7 +196,7 @@ export default async function AdminDashboard() {
             Content management
           </h2>
           <p className="mt-2 text-[#222222]">
-            Create posts, manage users, and keep the platform content current.
+            Create posts and keep the platform content current.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Link
@@ -204,12 +204,6 @@ export default async function AdminDashboard() {
               className="inline-flex rounded-md bg-[#0066bf] px-4 py-2 font-semibold text-white no-underline hover:bg-[#035a9e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
             >
               Manage posts
-            </Link>
-            <Link
-              href="/admin/users"
-              className="inline-flex rounded-md border border-[#0066bf] px-4 py-2 font-semibold text-[#0f6cba] no-underline hover:bg-[#eef3f8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066bf] focus-visible:ring-offset-2"
-            >
-              Manage users
             </Link>
           </div>
         </div>

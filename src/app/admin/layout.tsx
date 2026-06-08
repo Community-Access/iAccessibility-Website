@@ -6,7 +6,7 @@ import { AdminNav, type AdminSection } from "./admin-nav";
 // each page (defense in depth — never rely on hiding the nav link alone).
 const ALL_SECTIONS: Array<AdminSection & { adminOnly: boolean }> = [
   { href: "/admin", label: "Dashboard", adminOnly: false },
-  { href: "/admin/review", label: "Review queue", adminOnly: false },
+  { href: "/admin/review", label: "Pending review", adminOnly: false },
   { href: "/admin/posts", label: "Posts", adminOnly: true },
   { href: "/admin/users", label: "Users", adminOnly: true }
 ];
@@ -29,11 +29,7 @@ export default async function AdminLayout({
   return (
     <div className="wp-container">
       <div className="grid gap-8 lg:grid-cols-[14rem_minmax(0,1fr)]">
-        <AdminNav
-          sections={sections}
-          role={user.role}
-          name={user.displayName || user.email}
-        />
+        <AdminNav sections={sections} />
         <div className="min-w-0">{children}</div>
       </div>
     </div>

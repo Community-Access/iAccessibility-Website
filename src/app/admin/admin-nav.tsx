@@ -6,15 +6,7 @@ import { cn } from "@/lib/utils";
 
 export type AdminSection = { href: string; label: string };
 
-export function AdminNav({
-  sections,
-  role,
-  name
-}: {
-  sections: AdminSection[];
-  role: string;
-  name: string;
-}) {
+export function AdminNav({ sections }: { sections: AdminSection[] }) {
   const pathname = usePathname();
 
   return (
@@ -22,12 +14,6 @@ export function AdminNav({
       aria-label="Admin sections"
       className="rounded-lg bg-white p-4 shadow-wordpress"
     >
-      <p className="mb-3 text-sm text-[#595959]">
-        Signed in as{" "}
-        <span className="font-semibold text-[#222222]">{name}</span>
-        <br />
-        <span className="capitalize">{role}</span>
-      </p>
       <ul className="space-y-1">
         {sections.map((section) => {
           const active =

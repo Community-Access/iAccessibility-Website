@@ -230,7 +230,7 @@ export function ReviewQueue({
   return (
     <div className="space-y-8">
       <div className="wp-article">
-        <h1 className="text-3xl font-bold">Review queue</h1>
+        <h1 className="text-3xl font-bold">Pending review</h1>
         <p className="mt-3 text-[#595959]">
           Approve or reject pending member submissions. The submitter is emailed
           automatically when you make a decision.

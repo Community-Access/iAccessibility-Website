@@ -2,6 +2,35 @@
 
 Last updated: 2026-06-07
 
+## Admin feedback backlog (2026-06-07)
+
+Taylor ran a VoiceOver test pass over the admin + editor. Full backlog with
+status is in `ADMIN_FEEDBACK.md` (source of truth). Guiding preference: mirror
+the **Start-testing** admin and strip WordPress-style verbosity.
+
+Batch 1 (quick a11y + copy fixes) applied, accessibility-lead reviewed:
+- Footer: removed WhatsApp link; removed `aria-label="Social links"` (kept ul/li).
+- AdminNav: removed the "Signed in as <name> / <role>" block; component no longer
+  takes `name`/`role` props (also updated the layout call site).
+- Users page: removed the helper sentence; "Recent users" → "All users".
+- Dashboard: "Review queue" → "Pending review" (also nav label, review page h1,
+  review metadata); pluralized the user-counts detail; removed the duplicate
+  "Manage users" button from Content management.
+- Editor: "Featured image" legend now wraps an `<h2>` (heading-nav + fieldset
+  group preserved); command-palette trigger is a plain button — dropped
+  aria-haspopup + aria-controls, kept aria-expanded, added
+  aria-keyshortcuts="Meta+K Control+K", visible aria-hidden ⌘K kbd, sr-only span
+  so the name reads "Command palette, Command K".
+
+NOTE: the /admin/posts/new editor is a CUSTOM hand-rolled block editor (custom
+`blocks` array, custom block menus + command palette), NOT BlockNote — relevant
+for the remaining editor-behavior items (select-all+delete, blank-block on Enter,
+block-options-on-blur, command-palette "enter the post body" bug, drafts).
+
+Still open (bigger): Users-table rework, dashboard rebuild, editor behavior,
+media library, podcasts admin, post trash/unpublish, preview pane, profiles.
+Build passes after batch 1.
+
 ## Shared accessible UI primitives ported from Start-testing (2026-06-07)
 
 Brought over the proven-accessible reusable `ui/` primitives from

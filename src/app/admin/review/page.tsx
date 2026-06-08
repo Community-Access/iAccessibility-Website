@@ -6,7 +6,7 @@ import { ReviewQueue, type ReviewQueueRow } from "./review-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Review queue"
+  title: "Pending review"
 };
 
 export default async function AdminReviewPage() {
